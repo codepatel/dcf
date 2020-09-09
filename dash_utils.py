@@ -1,0 +1,145 @@
+
+import dash_core_components as dcc
+import dash_html_components as html
+import dash_bootstrap_components as dbc
+import dash_table
+import dateutil.relativedelta
+from datetime import date
+
+SELF_URL = 'https://dcf-valuation-damodaran.herokuapp.com'
+
+def make_table(id, dataframe, lineHeight = '17px', page_size = 5):
+    return   dash_table.DataTable(
+        id=id,
+        css=[{'selector': '.row', 'rule': 'margin: 0'}],
+        columns=[
+            {"name": i, "id": i} for i in dataframe.columns
+        ],
+        style_header={
+            'backgroundColor': 'rgb(230, 230, 230)',
+            'fontWeight': 'bold'},
+            style_cell={'textAlign': 'left'},
+            style_data={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'lineHeight': lineHeight
+            },
+        # style_table = {'width':300},
+        style_data_conditional=[
+                {
+                    'if': {'row_index': 'odd'},
+                    'backgroundColor': 'rgb(248, 248, 248)'
+                }
+            ],
+        style_cell_conditional=[
+            {'if': {'column_id': 'title'},
+            'width': '130px'},
+            {'if': {'column_id': 'post'},
+            'width': '500px'},
+            {'if': {'column_id': 'datetime'},
+            'width': '130px'},
+            {'if': {'column_id': 'text'},
+            'width': '500px'}],
+        page_current=0,
+        page_size=page_size,
+        page_action='custom',
+        filter_action='custom',
+        filter_query='',
+        sort_action='custom',
+        sort_mode='multi',
+        sort_by=[],
+        data=dataframe.to_dict('records')
+    )
+
+def make_card(alert_message, color, cardbody, style_dict = None):
+    return  dbc.Card([
+        dbc.Alert(alert_message, color=color),
+        dbc.CardBody(cardbody)
+        ], style = style_dict
+    )#end card
+
+def ticker_inputs(inputID, pickerID, MONTH_CUTTOFF):
+    
+    currentDate = date.today() 
+    pastDate = currentDate - dateutil.relativedelta.relativedelta(months=MONTH_CUTTOFF)
+    
+    return html.Div([
+        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", value="AAPL", debounce=True), 
+        html.P(" "), 
+        dcc.DatePickerRange(
+        id = pickerID,
+        min_date_allowed=pastDate,
+        max_date_allowed=currentDate,
+        #initial_visible_month=dt(2017, 8, 5),
+        start_date = pastDate,
+        end_date = currentDate
+        )
+    ])
+
+def make_item(button, cardbody, i):
+    # we use this function to make the example items to avoid code duplication
+    return dbc.Card([
+        dbc.CardHeader(
+            html.H2(
+                dbc.Button(
+                    button,
+                    color="link",
+                    id=f"group-{i}-toggle",
+                ))
+        ),
+        dbc.Collapse(
+            dbc.CardBody(cardbody),
+            id=f"collapse-{i}",
+        )
+    ])
+
+def make_social_media_share():
+    # got these buttons from simplesharebuttons.com, Yolandi Vi$$er
+    return dbc.CardGroup([
+        dbc.Card([ # Facebook
+            dbc.CardImg(
+            src='/assets/images/MiniFB.png',
+            alt='Share with Facebook',
+            title='Share with Facebook',
+            style={'width':50, 'height':50}
+            ),
+            dbc.CardLink('FB', href=f'http://www.facebook.com/sharer.php?u={SELF_URL}', target='_blank')
+        ]),
+        dbc.Card([ # LinkedIn
+            dbc.CardImg(
+            src='/assets/images/MiniLinkedIn.png',
+            alt='Share with LinkedIn',
+            title='Share with LinkedIn',
+            style={'width':50, 'height':50}
+            ),
+            dbc.CardLink('in', href=f'http://www.linkedin.com/shareArticle?mini=true&url={SELF_URL}', target='_blank')
+        ]),
+        dbc.Card([ # Twitter
+            dbc.CardImg(
+            src='/assets/images/MiniTwitter.png',
+            alt='Tweet this!',
+            title='Tweet this!',
+            style={'width':50, 'height':50}
+            ),
+            dbc.CardLink('Tweet', href=f'http://twitter.com/share?url={SELF_URL}/&text=Stock_Analysis&hashtags=StockAnalysis', target='_blank')
+        ], style={"width": "5rem"}),
+        dbc.Card([ # Pinterest
+            dbc.CardImg(
+            src='/assets/images/MiniPinterest.png',
+            alt='Pin It!',
+            title='Pin It!',
+            style={'width':50, 'height':50}
+            ),
+            dbc.CardLink('Pin', href=f'https://pinterest.com/pin/create/button/?url={SELF_URL}/&media=StockAnalysis&description=StockAnalysis', target='_blank')
+        ]),
+        dbc.Card([ # Email
+            dbc.CardImg(
+            src='/assets/images/MiniEmail.png',
+            alt='Email link!',
+            title='Email link!',
+            style={'width':50, 'height':50}
+            ),
+            dbc.CardLink('Email', href=f'mailto:?Subject=Stock Analysis Web App&Body=I saw this and wanted to share it with you: {SELF_URL}/', target='_blank')
+        ]),
+        dbc.Card([])    # empty card at end as spacer
+    ])
