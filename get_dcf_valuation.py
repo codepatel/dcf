@@ -15,7 +15,7 @@ OPTIONS_VALUE = 0
 def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
                     tax_rate='15', riskfree_rate='3', cost_of_cap='8.5'):
-    last_price = float(handler_data[0]['last-price'].split(' @')[0].replace(',', ''))
+    last_price = float(handler_data[0]['status-info'].split(' @')[0].replace(',', ''))
     df = pd.DataFrame.from_dict(df_dict)
     rgr_next = float(rgr_next)/100
     opm_next = float(opm_next)/100
@@ -34,7 +34,7 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     year0_ebit = get_number_from_string(df['Pretax Income($)'].iloc[-1])
     year0_margin = year0_ebit/year0_revenue
     year0_rgr = (get_number_from_string(df['Revenue($)'].iloc[-2])/get_number_from_string(df['Revenue($)'].iloc[0])) ** (1/(len(df)-2)) - 1
-    year0_capex = -get_number_from_string(df['Capital Expenditures($)'].iloc[-1])
+    year0_capex = -get_number_from_string(df['Capital Expenditures($)'].iloc[-1]) + get_number_from_string(df['Research & Development($)'].iloc[-1])
     year0_netincome = year0_ebit * (1-tax_rate)
     year0_fcf = year0_netincome - year0_capex
 
@@ -88,4 +88,4 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
 if __name__ == "__main__":
     from get_fin_report import get_financial_report
     df_past, a, b, c = get_financial_report('INTC')
-    dcf_df, dcf_dict = get_dcf_df(df_past.to_dict('records'), [{'last-price': '100 @'}])
+    dcf_df, dcf_dict = get_dcf_df(df_past.to_dict('records'), [{'status-info': '100 @'}])

@@ -44,7 +44,7 @@ app.layout = html.Div([
     dbc.Row([
         dbc.Col([
         make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)),
-        make_card('Last Price', 'success', html.P(id='last-price', children='Updating...')),
+        make_card('Last Price', 'success', html.P(id='status-info', children='Updating...')),
         make_card('Supplemental Info', 'success', html.P(id='supp-info', children='Updating...'))
         ]),
         dbc.Col([
@@ -159,6 +159,14 @@ app.layout = html.Div([
     ])  # footer row
 ])
 
+def handler_data_message(title, exception_obj):
+    return [{
+        'status-info': html.P(children=title, 
+        style={'backgroundColor': 'red', 'fontSize': '200%'}),
+        'supp-data': html.P(children=str(exception_obj),
+        style={'color': 'red'})
+        }]
+
 @app.callback([Output("ticker-input", "valid"), 
 Output("ticker-input", "invalid")],
 [Input("ticker-input", "value")])
@@ -169,28 +177,28 @@ def check_validity(ticker):
         return is_valid_ticker, not is_valid_ticker
     return False, True
 
-@app.callback([Output('last-price', 'children'),
+@app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 
-[Input('ticker-input', 'value'),
-Input('handler-data', 'data')])
-def refresh_for_update(ticker, handler_list):
+[Input('handler-data', 'data')])
+def refresh_for_update(handler_list):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
-    return handler_list[0]['last-price'], handler_list[0]['supp-data']
+    return handler_list[0]['status-info'], handler_list[0]['supp-data']
 
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
-Output('handler-data', 'data')], 
-[Input('ticker-input', 'value'),
-Input('ticker-input', 'valid')])
-def fin_report(ticker, ticker_validity):
-    if not ticker:
-        raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
-    if not ticker_validity:
-        raise ValueError("Invalid Ticker entered: " + ticker)
-    ticker = ticker.upper()
+Output('handler-data', 'data')],
+[Input('ticker-input', 'valid')],
+[State('ticker-input', 'value')])
+def fin_report(ticker_validity, ticker):
     try:
+        if not ticker:
+            raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
+        if not ticker_validity:
+            raise ValueError("Invalid Ticker entered: " + ticker)
+        ticker = ticker.upper()
+    
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker)
         #table = make_table('table-sorting-filtering3', df, '20px',8)
         table = dbc.Table.from_dataframe(df[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
@@ -200,34 +208,38 @@ def fin_report(ticker, ticker_validity):
             f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]}, " \
             f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * float(lastprice.replace(',','')))}, " \
             f"Cash as of MRQ: {df['Cash($)'].iloc[-1]}"
-        handler_data = {'last-price': lastprice + ' @ ' + lastprice_time, 
+        handler_data = {'status-info': lastprice + ' @ ' + lastprice_time, 
                         'supp-data': supp_data_notes}
         return table, df.to_dict('records'), [handler_data]
         # 'records' is more "compatible" than 'series'
-    except ValueError as InvalidTicker:
-        dbc.Alert(
-            str(InvalidTicker),
-            id="alert-invalid-ticker",
-            dismissable=True,
-            is_open=True,
-        )
-        raise
+    except Exception as InvalidTicker:
+        # dbc.Alert(
+        #     str(InvalidTicker),
+        #     id="alert-invalid-ticker",
+        #     dismissable=True,
+        #     is_open=True,
+        # )
+        return [], [], handler_data_message('See Error Message below:', InvalidTicker)
 
 @app.callback(Output('plot-indicators', 'figure'),
 [Input('select-column', 'value'),
 Input('fin-df', 'data')])
 def update_graph(column_name, df_dict):
-    df = pd.DataFrame.from_dict(df_dict).applymap(get_number_from_string)
-    fig = px.line(df, x='index', y=column_name,
-                    line_shape='spline')
-    fig.update_traces(mode='lines+markers')
-    fig.update_layout(
-        title="Past Performance is not a guarantee of Future Returns",
-        xaxis_title="Year",
-        yaxis_title="Value ($ or Ratio or %)",
-        legend_title="Parameter(s)"
-    )
-    return fig
+    try:
+        df = pd.DataFrame.from_dict(df_dict).applymap(get_number_from_string)
+        fig = px.line(df, x='index', y=column_name,
+                        line_shape='spline')
+        fig.update_traces(mode='lines+markers')
+        fig.update_layout(
+            title="Past Performance is not a guarantee of Future Returns",
+            xaxis_title="Year",
+            yaxis_title="Value ($ or Ratio or %)",
+            legend_title="Parameter(s)"
+        )
+        return fig
+    except Exception as e:
+        print(e)
+        return {}
 
 @app.callback([Output('dcf-table', 'children'),
 Output('dcf-data', 'children')],
@@ -243,12 +255,16 @@ Input('riskfree-rate', 'value'),
 Input('cost-of-cap', 'value'),
 ])
 def dcf_valuation(*args, **kwargs):
-    dcf_df, dcf_output_dict = get_dcf_df(*args)
-    dcf_output_df = pd.DataFrame({
-                        'Price': [dcf_output_dict['last_price']],
-                        'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
-                        'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])]})
-    return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True)
+    try:
+        dcf_df, dcf_output_dict = get_dcf_df(*args)
+        dcf_output_df = pd.DataFrame({
+                            'Price': [dcf_output_dict['last_price']],
+                            'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
+                            'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])]})
+        return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True)
+    except Exception as e:
+        print(e)
+        return [],[]
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_reloader=False)  # Turn off reloader if inside Jupyter
