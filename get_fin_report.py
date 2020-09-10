@@ -169,7 +169,7 @@ def get_number_from_string(str_value):
     try:
         if isinstance(str_value, str):
             str_value = str_value.replace(',', '')  # remove commas for formatting
-        if str_value == '-':
+        if str_value == '-' or str_value == '--':
             return None
         else:
             try:

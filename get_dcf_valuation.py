@@ -33,20 +33,24 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     year0_revenue = get_number_from_string(df['Revenue($)'].iloc[-1])
     year0_ebit = get_number_from_string(df['Pretax Income($)'].iloc[-1])
     year0_margin = year0_ebit/year0_revenue
+    year0_rgr = (get_number_from_string(df['Revenue($)'].iloc[-2])/get_number_from_string(df['Revenue($)'].iloc[0])) ** (1/(len(df)-2)) - 1
+    year0_capex = -get_number_from_string(df['Capital Expenditures($)'].iloc[-1])
+    year0_netincome = year0_ebit * (1-tax_rate)
+    year0_fcf = year0_netincome - year0_capex
 
     dcftable = {
         'Revenue($)': [year0_revenue],
-        'Revenue Growth(%)': [None, rgr_next] + [cagr_2_5] * 4 + 
+        'Revenue Growth(%)': [year0_rgr, rgr_next] + [cagr_2_5] * 4 + 
                     [cagr_2_5-(delta_rate_late_stage * p) for p in range (1, TERMINAL_YEAR_LENGTH-5+1)] + [terminal_growth_rate],
         'EBIT($)': [year0_ebit],
         'Operating Margin(%)': [year0_margin, opm_next] + 
                     [opm_target if p>CONVERGENCE_PERIOD else opm_target-((opm_target-year0_margin)/CONVERGENCE_PERIOD)*(CONVERGENCE_PERIOD-p) for p in range (2, TERMINAL_YEAR_LENGTH+2)],
         'Tax Rate(%)': [tax_rate] * 6 + [tax_rate + (MARGINAL_TAX_RATE - tax_rate) * p/5 for p in range(1, TERMINAL_YEAR_LENGTH-5+1)] + [MARGINAL_TAX_RATE],
-        'Net Income($)': [year0_ebit * (1-tax_rate)],
-        'Reinvestment($)': [None],
-        'FCF($)': [None],
+        'Net Income($)': [year0_netincome],
+        'Reinvestment($)': [year0_capex],
+        'FCF($)': [year0_fcf],
         'CDF(%)': [1],
-        'PV_FCF($)': [None]
+        'PV_FCF($)': [year0_fcf]
     }
     for period in range(1, TERMINAL_YEAR_LENGTH+2):
         dcftable['Revenue($)'].append(dcftable['Revenue($)'][period-1] * (1+dcftable['Revenue Growth(%)'][period]))
