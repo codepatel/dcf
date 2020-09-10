@@ -97,26 +97,6 @@ app.layout = html.Div([
         html.H6('Select Parameter(s) to show trend over the past periods'),
         dcc.Dropdown(
                 id='select-column',
-                options=[{'label': i, 'value': i} for i in [#'Revenue($)',
-                                                            'EPS($)',
-                                                            'EPS Growth(%)',
-                                                            # 'Pretax Income($)',
-                                                            # 'Net Income($)',
-                                                            # 'Interest Expense($)',
-                                                            # 'EBITDA($)',
-                                                            # 'Longterm Debt($)',
-                                                            # 'Shareholder Equity($)',
-                                                            # 'Total Assets($)',
-                                                            # 'Intangible Assets($)',
-                                                            # 'Total Current Liabilities($)',
-                                                            # 'Capital Expenditures($)',
-                                                            'Net Profit Margin',
-                                                            'Capital Employed($)',
-                                                            'Sales-to-Capital',
-                                                            'ROCE',
-                                                            'Cash($)',
-                                                            'Research & Development($)',
-                                                            'Shares Outstanding']],  # list(df.columns)[1:]
                 value=['ROCE', 'Sales-to-Capital', 'Net Profit Margin'],
                 multi=True
         ),
@@ -188,6 +168,7 @@ def refresh_for_update(handler_list):
 
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
+Output('select-column', 'options'),
 Output('handler-data', 'data')],
 [Input('ticker-input', 'valid')],
 [State('ticker-input', 'value')])
@@ -210,7 +191,9 @@ def fin_report(ticker_validity, ticker):
             f"Cash as of MRQ: {df['Cash($)'].iloc[-1]}"
         handler_data = {'status-info': lastprice + ' @ ' + lastprice_time, 
                         'supp-data': supp_data_notes}
-        return table, df.to_dict('records'), [handler_data]
+        select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
+
+        return table, df.to_dict('records'), select_column_options, [handler_data]
         # 'records' is more "compatible" than 'series'
     except Exception as InvalidTicker:
         # dbc.Alert(
@@ -219,7 +202,7 @@ def fin_report(ticker_validity, ticker):
         #     dismissable=True,
         #     is_open=True,
         # )
-        return [], [], handler_data_message('See Error Message below:', InvalidTicker)
+        return [], [], [], handler_data_message('See Error Message below:', InvalidTicker)
 
 @app.callback(Output('plot-indicators', 'figure'),
 [Input('select-column', 'value'),
