@@ -13,7 +13,7 @@ import plotly.express as px
 from iexfinance.stocks import Stock
 
 from dash_utils import make_table, make_card, ticker_inputs, make_item, make_social_media_share
-from get_fin_report import get_financial_report, get_number_from_string
+from get_fin_report import get_financial_report, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
 
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
@@ -30,7 +30,7 @@ app.config.suppress_callback_exceptions = True
 heading_markdown_text = '''
 ### Purpose of this web app ###
 ##### To be one of the tools to educate and democratize fundamentals DCF (Discounted Cash Flow) Valuation Analysis of public equity investments #####
-See footer below for more on [About this Webapp], Disclaimer and Assumptions
+See footer below for more on [About this DCF Valuation App](#about-this-app), Disclaimer and Assumptions
 '''
 
 app.layout = html.Div([
@@ -45,7 +45,7 @@ app.layout = html.Div([
         dbc.Col([
         make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)),
         make_card('Last Price', 'success', html.P(id='last-price', children='Updating...')),
-        make_card('MRQ Report date', 'success', html.P(id='mrq-report-date', children='Updating...'))
+        make_card('Supplemental Info', 'success', html.P(id='supp-info', children='Updating...'))
         ]),
         dbc.Col([
         make_card('DCF Inputs - Company factors', 'info', dbc.Form([
@@ -94,7 +94,7 @@ app.layout = html.Div([
     ]), # row 2
     dbc.Row([
         dbc.Col([html.Div([
-        html.H6('Select Parameter(s) to show trend over past period'),
+        html.H6('Select Parameter(s) to show trend over the past periods'),
         dcc.Dropdown(
                 id='select-column',
                 options=[{'label': i, 'value': i} for i in [#'Revenue($)',
@@ -141,7 +141,7 @@ app.layout = html.Div([
     ], id='cards'), # row 3
     dbc.Row([dbc.Col(
         dcc.Markdown(children='''
-        #### About this Webapp ####
+        #### About this App
         - [Inspired by Professor Aswath Damodaran's teachings and Mission](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/home.htm)
         - [Prof. Damodaran's Data Sources](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datacurrent.html)
         - [Prof. Damodaran's Valuation Tools Webcast](https://www.youtube.com/watch?v=F9GfXJ-IrSA)
@@ -170,14 +170,14 @@ def check_validity(ticker):
     return False, True
 
 @app.callback([Output('last-price', 'children'),
-Output('mrq-report-date', 'children')], 
+Output('supp-info', 'children')], 
 [Input('ticker-input', 'value'),
 Input('handler-data', 'data')])
 def refresh_for_update(ticker, handler_list):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
-    return handler_list[0]['last-price'], handler_list[0]['mrq-report-data']
+    return handler_list[0]['last-price'], handler_list[0]['supp-data']
 
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
@@ -196,8 +196,12 @@ def fin_report(ticker, ticker_validity):
         table = dbc.Table.from_dataframe(df[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
                 'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Capital Expenditures($)']], 
                 striped=True, bordered=True, hover=True)
+        supp_data_notes = f'MRQ report ending: {report_date_note}, ' \
+            f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]}, " \
+            f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * float(lastprice.replace(',','')))}, " \
+            f"Cash as of MRQ: {df['Cash($)'].iloc[-1]}"
         handler_data = {'last-price': lastprice + ' @ ' + lastprice_time, 
-                        'mrq-report-data': report_date_note}
+                        'supp-data': supp_data_notes}
         return table, df.to_dict('records'), [handler_data]
         # 'records' is more "compatible" than 'series'
     except ValueError as InvalidTicker:
