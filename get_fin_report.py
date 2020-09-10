@@ -26,7 +26,7 @@ def get_financial_report(ticker):
     bsdata_lines = {'equity': [], 'ltd': [], 'totalassets': [], 'intangibleassets': [], 
                     'currentliab': [], 'cash': []
                     }
-    cfdata_lines = {'capex': []}
+    cfdata_lines = {'capex': [], 'fcf': []}
 
     # find the table headers for the Financial statements
     fin_titles = {k:get_titles(finsoup[k]) for k in findata_keys}
@@ -54,6 +54,7 @@ def get_financial_report(ticker):
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
 
     capEx = get_element(cfdata_lines['capex'],1) + get_element(cfdata_lines['capex'],6)
+    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
     df= pd.DataFrame({'Revenue($)': revenue, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
@@ -62,7 +63,7 @@ def get_financial_report(ticker):
             'Longterm Debt($)': longtermDebt, 'Shareholder Equity($)': shareholderEquity,
             'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets, 
             'Total Current Liabilities($)': currentLiabilities, 'Cash($)': cash,
-            'Capital Expenditures($)': capEx
+            'Capital Expenditures($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(date.today().year-5,date.today().year+1))
     df.reset_index(inplace=True)
     df['Net Profit Margin'] = df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)
@@ -148,6 +149,8 @@ def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
         if 'Capital Expenditures' in title.text:
             data_lines['capex'].append(data_list)
+        if 'Free Cash Flow' in title.text:
+            data_lines['fcf'].append(data_list)
 
     for title in data_titles['acf']:
         build_cashflow_list(walk_row(title))
