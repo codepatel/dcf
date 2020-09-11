@@ -97,49 +97,49 @@ def make_social_media_share():
     # got these buttons from simplesharebuttons.com, Yolandi Vi$$er
     return dbc.CardGroup([
         dbc.Card([ # Facebook
-            dbc.CardImg(
+            html.A(href=f'http://www.facebook.com/sharer.php?u={SELF_URL}', target='_blank',
+            children=dbc.CardImg(
             src='/assets/images/MiniFB.png',
             alt='Share with Facebook',
             title='Share with Facebook',
             style={'width':50, 'height':50}
-            ),
-            dbc.CardLink('FB', href=f'http://www.facebook.com/sharer.php?u={SELF_URL}', target='_blank')
+            )),
         ]),
         dbc.Card([ # LinkedIn
-            dbc.CardImg(
+            html.A(href=f'http://www.linkedin.com/shareArticle?mini=true&url={SELF_URL}', target='_blank',
+            children=dbc.CardImg(
             src='/assets/images/MiniLinkedIn.png',
             alt='Share with LinkedIn',
             title='Share with LinkedIn',
             style={'width':50, 'height':50}
-            ),
-            dbc.CardLink('in', href=f'http://www.linkedin.com/shareArticle?mini=true&url={SELF_URL}', target='_blank')
+            )),   
         ]),
         dbc.Card([ # Twitter
-            dbc.CardImg(
+            html.A(href=f'http://twitter.com/share?url={SELF_URL}/&text=Stock_Analysis&hashtags=StockAnalysis', target='_blank',
+            children=dbc.CardImg(
             src='/assets/images/MiniTwitter.png',
             alt='Tweet this!',
             title='Tweet this!',
             style={'width':50, 'height':50}
-            ),
-            dbc.CardLink('Tweet', href=f'http://twitter.com/share?url={SELF_URL}/&text=Stock_Analysis&hashtags=StockAnalysis', target='_blank')
-        ], style={"width": "5rem"}),
+            )),
+        ]), # , style={"width": "5rem"}
         dbc.Card([ # Pinterest
-            dbc.CardImg(
+            html.A(href=f'https://pinterest.com/pin/create/button/?url={SELF_URL}/&media=StockAnalysis&description=StockAnalysis', target='_blank',
+            children=dbc.CardImg(
             src='/assets/images/MiniPinterest.png',
             alt='Pin It!',
             title='Pin It!',
             style={'width':50, 'height':50}
-            ),
-            dbc.CardLink('Pin', href=f'https://pinterest.com/pin/create/button/?url={SELF_URL}/&media=StockAnalysis&description=StockAnalysis', target='_blank')
+            )),            
         ]),
         dbc.Card([ # Email
-            dbc.CardImg(
+            html.A(href=f'mailto:?Subject=Stock Analysis Web App&Body=I saw this and wanted to share it with you: {SELF_URL}/', target='_blank',
+            children=dbc.CardImg(
             src='/assets/images/MiniEmail.png',
             alt='Email link!',
             title='Email link!',
             style={'width':50, 'height':50}
-            ),
-            dbc.CardLink('Email', href=f'mailto:?Subject=Stock Analysis Web App&Body=I saw this and wanted to share it with you: {SELF_URL}/', target='_blank')
+            )),            
         ]),
-        dbc.Card([])    # empty card at end as spacer
+        #dbc.Card([])    # empty card at end as spacer
     ])

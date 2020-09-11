@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+import logging
 import pandas as pd
 import flask
 import dash
@@ -15,6 +17,13 @@ from iexfinance.stocks import Stock
 from dash_utils import make_table, make_card, ticker_inputs, make_item, make_social_media_share
 from get_fin_report import get_financial_report, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
+
+logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
+                datefmt='%Y-%m-%d_%I:%M:%S_%p',
+                filename=os.path.expandvars('./tmp/app_DCFoutput.log'),
+                filemode='w',
+                level=logging.INFO)
+logger = logging.getLogger()
 
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
 
@@ -202,6 +211,7 @@ def fin_report(ticker_validity, ticker):
         #     dismissable=True,
         #     is_open=True,
         # )
+        logger.error(InvalidTicker)
         return [], [], [], handler_data_message('See Error Message below:', InvalidTicker)
 
 @app.callback(Output('plot-indicators', 'figure'),
@@ -210,6 +220,9 @@ Input('fin-df', 'data')])
 def update_graph(column_name, df_dict):
     try:
         df = pd.DataFrame.from_dict(df_dict).applymap(get_number_from_string)
+        for col in list(df.columns):
+            if '%' in col:  # scale up ratio by 100 if unit is %
+                df[col] = df[col]*100
         fig = px.line(df, x='index', y=column_name,
                         line_shape='spline')
         fig.update_traces(mode='lines+markers')
@@ -221,7 +234,7 @@ def update_graph(column_name, df_dict):
         )
         return fig
     except Exception as e:
-        print(e)
+        logger.error(e)
         return {}
 
 @app.callback([Output('dcf-table', 'children'),
@@ -246,7 +259,7 @@ def dcf_valuation(*args, **kwargs):
                             'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])]})
         return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True)
     except Exception as e:
-        print(e)
+        logger.error(e)
         return [],[]
 
 if __name__ == '__main__':
