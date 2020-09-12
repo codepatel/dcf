@@ -1,5 +1,6 @@
 import os
 import traceback
+import json
 from pathlib import Path
 import logging
 import pandas as pd
@@ -11,13 +12,15 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import dash_table as dt
 from dash.exceptions import PreventUpdate
-import plotly.graph_objs as go
+# import plotly.graph_objs as go
 import plotly.express as px
-from iexfinance.stocks import Stock
+# from iexfinance.stocks import Stock
 
 from dash_utils import make_table, make_card, ticker_inputs, make_item, make_social_media_share
 from get_fin_report import get_financial_report, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
+
+HERE = Path(__file__).parent
 
 logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
                 datefmt='%Y-%m-%d_%I:%M:%S_%p',
@@ -36,6 +39,9 @@ app = dash.Dash(__name__, server = server,
 #used for dynamic callbacks
 app.config.suppress_callback_exceptions = True
 
+with open(Path(HERE,'assets','symbols.json')) as symfile:
+    symdata = json.load(symfile)
+ticker_dict = {s['symbol']:s['symbol']+'('+s['exchange']+'):'+s['name'] for s in symdata}
 
 heading_markdown_text = '''
 ### Purpose of this web app ###
@@ -53,7 +59,13 @@ app.layout = html.Div([
     ]), # heading row
     dbc.Row([
         dbc.Col([
-        make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)),
+        make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)
+        # dbc.Select(
+        #     id='ticker-input', 
+        #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
+        #     value='AAPL',
+        #     placeholder='Start typing Ticker, press Enter')
+        ),
         make_card('Status Message', 'success', html.P(id='status-info', children='Updating...')),
         make_card('Supplemental Info', 'success', html.P(id='supp-info', children='Updating...'))
         ]),
@@ -168,10 +180,9 @@ def check_ticker_validity(ticker):
     try:
         if not ticker:
             raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
-        if ticker.isalpha():
-            is_valid_ticker = True 
-            # TODO: Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
-            return is_valid_ticker, not is_valid_ticker, [{'status-info': 'Getting financial data... for ' + ticker.upper() + ' :\nLast Price ', 
+        if ticker.isalpha() and ticker.upper() in ticker_dict:  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
+            is_valid_ticker = True
+            return is_valid_ticker, not is_valid_ticker, [{'status-info': 'Received financial data... for ' + ticker_dict[ticker.upper()] + ' :\nLast Price ', 
                                                             'supp-data': ''}]
         else:
             raise ValueError("Invalid Ticker entered: " + ticker)
@@ -207,10 +218,13 @@ def refresh_for_update(handler_ticker, handler_past, handler_dcf):
 Output('fin-df', 'data'),
 Output('select-column', 'options'),
 Output('handler-past-data', 'data')],
-[Input('handler-ticker-valid', 'data')],
+[Input('ticker-input', 'valid')],
 [State('ticker-input', 'value')])
-def fin_report(ticker_valid_data, ticker):
+def fin_report(ticker_valid, ticker):
     try:  
+        if not ticker_valid:
+            raise ValueError("Invalid Ticker entered: " + ticker)
+        
         ticker = ticker.upper()
     
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker)
@@ -272,6 +286,8 @@ Input('cost-of-cap', 'value'),
 ])
 def dcf_valuation(*args, **kwargs):
     try:
+        if not args[0]:
+            raise ValueError("Invalid Data received: " + args[1]['supp-data'])
         dcf_df, dcf_output_dict = get_dcf_df(*args)
         dcf_output_df = pd.DataFrame({
                             'Price': [dcf_output_dict['last_price']],

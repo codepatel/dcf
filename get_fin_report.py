@@ -71,11 +71,14 @@ def get_financial_report(ticker):
     df['Sales-to-Capital'] = df['Revenue($)'].apply(get_number_from_string) / df['Capital Employed($)'].apply(get_number_from_string)
     df['ROCE'] = df['Net Income($)'].apply(get_number_from_string) / df['Capital Employed($)'].apply(get_number_from_string)
 
-    lastprice = finsoup['ais'].findAll('p', {'class': 'data bgLast'})[0].text
-    lastprice_time = finsoup['ais'].findAll('p', {'class': 'lastcolumn bgTimestamp longformat'})[0].text
-    fiscal_year_note = finsoup['ais'].findAll('th', {'class': 'rowTitle'})[0].text.split('.')[0]
-    mrq_date = finsoup['qis'].findAll('th', {'scope': 'col'})[-2].text
-    report_date_note = mrq_date + ", " + fiscal_year_note
+    try:
+        lastprice = finsoup['ais'].findAll('p', {'class': 'data bgLast'})[0].text
+        lastprice_time = finsoup['ais'].findAll('p', {'class': 'lastcolumn bgTimestamp longformat'})[0].text
+        fiscal_year_note = finsoup['ais'].findAll('th', {'class': 'rowTitle'})[0].text.split('.')[0]
+        mrq_date = finsoup['qis'].findAll('th', {'scope': 'col'})[-2].text
+        report_date_note = mrq_date + ", " + fiscal_year_note
+    except IndexError:
+        raise IndexError("Data not found for Ticker: " + ticker)
 
     return df, lastprice, lastprice_time, report_date_note
 
