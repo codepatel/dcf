@@ -22,6 +22,9 @@ from get_dcf_valuation import get_dcf_df
 
 HERE = Path(__file__).parent
 
+if not os.path.exists('tmp'):
+    os.makedirs('tmp')
+
 logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
                 datefmt='%Y-%m-%d_%I:%M:%S_%p',
                 filename=os.path.expandvars('./tmp/app_DCFoutput.log'),
@@ -39,7 +42,7 @@ app = dash.Dash(__name__, server = server,
 #used for dynamic callbacks
 app.config.suppress_callback_exceptions = True
 
-with open(Path(HERE,'assets','symbols.json')) as symfile:
+with open(Path(HERE, 'assets', 'symbols.json')) as symfile:
     symdata = json.load(symfile)
 ticker_dict = {s['symbol']:s['symbol']+'('+s['exchange']+'):'+s['name'] for s in symdata}
 
