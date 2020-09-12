@@ -1,4 +1,5 @@
 import os
+import traceback
 from pathlib import Path
 import logging
 import pandas as pd
@@ -53,7 +54,7 @@ app.layout = html.Div([
     dbc.Row([
         dbc.Col([
         make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)),
-        make_card('Last Price', 'success', html.P(id='status-info', children='Updating...')),
+        make_card('Status Message', 'success', html.P(id='status-info', children='Updating...')),
         make_card('Supplemental Info', 'success', html.P(id='supp-info', children='Updating...'))
         ]),
         dbc.Col([
@@ -93,7 +94,10 @@ app.layout = html.Div([
     dbc.Row([
         dbc.Col([
             make_card("Past records Financial table (Current Year is TTM/MRQ) ", "secondary", 
-            html.Div(id="fin-table")),  dt.DataTable(id="fin-df"), dt.DataTable(id="handler-data"), 
+            html.Div(id="fin-table")),  dt.DataTable(id="fin-df"), 
+                dt.DataTable(id="handler-ticker-valid"),
+                dt.DataTable(id="handler-past-data"), 
+                dt.DataTable(id="handler-dcf-data"),
             html.Small('Data source: https://www.marketwatch.com/ Copyright 2020 FactSet Research Systems Inc. All rights reserved. Source FactSet Fundamentals')
         ]),
         dbc.Col([
@@ -157,36 +161,56 @@ def handler_data_message(title, exception_obj):
         }]
 
 @app.callback([Output("ticker-input", "valid"), 
-Output("ticker-input", "invalid")],
+Output("ticker-input", "invalid"),
+Output('handler-ticker-valid', 'data')],
 [Input("ticker-input", "value")])
-def check_validity(ticker):
-    if ticker:
-        is_valid_ticker = ticker.isalpha()  
-        # TODO: Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
-        return is_valid_ticker, not is_valid_ticker
-    return False, True
+def check_ticker_validity(ticker):
+    try:
+        if not ticker:
+            raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
+        if ticker.isalpha():
+            is_valid_ticker = True 
+            # TODO: Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
+            return is_valid_ticker, not is_valid_ticker, [{'status-info': 'Getting financial data... for ' + ticker.upper() + ' :\nLast Price ', 
+                                                            'supp-data': ''}]
+        else:
+            raise ValueError("Invalid Ticker entered: " + ticker)
+    except Exception as InvalidTicker:
+        # dbc.Alert(
+        #     str(InvalidTicker),
+        #     id="alert-invalid-ticker",
+        #     dismissable=True,
+        #     is_open=True,
+        # )
+        logger.exception(InvalidTicker)
+        return False, True, handler_data_message('See Error Message below:', 
+                                                traceback.format_exc())
 
 @app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 
-[Input('handler-data', 'data')])
-def refresh_for_update(handler_list):
+[Input('handler-ticker-valid', 'data'),
+Input('handler-past-data', 'data'),
+Input('handler-dcf-data', 'data')])
+def refresh_for_update(handler_ticker, handler_past, handler_dcf):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
-    return handler_list[0]['status-info'], handler_list[0]['supp-data']
+    status_msg = []
+    supp_msg = []
+    for c in ctx.triggered:
+        if c['value']:
+            status_msg.append(c['value'][0]['status-info'])
+            supp_msg.append(c['value'][0]['supp-data'])
+    return status_msg, supp_msg
 
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
 Output('select-column', 'options'),
-Output('handler-data', 'data')],
-[Input('ticker-input', 'valid')],
+Output('handler-past-data', 'data')],
+[Input('handler-ticker-valid', 'data')],
 [State('ticker-input', 'value')])
-def fin_report(ticker_validity, ticker):
-    try:
-        if not ticker:
-            raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
-        if not ticker_validity:
-            raise ValueError("Invalid Ticker entered: " + ticker)
+def fin_report(ticker_valid_data, ticker):
+    try:  
         ticker = ticker.upper()
     
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker)
@@ -204,15 +228,10 @@ def fin_report(ticker_validity, ticker):
 
         return table, df.to_dict('records'), select_column_options, [handler_data]
         # 'records' is more "compatible" than 'series'
-    except Exception as InvalidTicker:
-        # dbc.Alert(
-        #     str(InvalidTicker),
-        #     id="alert-invalid-ticker",
-        #     dismissable=True,
-        #     is_open=True,
-        # )
-        logger.error(InvalidTicker)
-        return [], [], [], handler_data_message('See Error Message below:', InvalidTicker)
+    except Exception as e:       
+        logger.exception(e)
+        return [], [], [], handler_data_message('See Error Message below:', 
+                                                traceback.format_exc())
 
 @app.callback(Output('plot-indicators', 'figure'),
 [Input('select-column', 'value'),
@@ -234,13 +253,14 @@ def update_graph(column_name, df_dict):
         )
         return fig
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         return {}
 
 @app.callback([Output('dcf-table', 'children'),
-Output('dcf-data', 'children')],
+Output('dcf-data', 'children'),
+Output('handler-dcf-data', 'data')],
 [Input('fin-df', 'data'),
-Input('handler-data', 'data'),
+Input('handler-past-data', 'data'),
 Input('rgr-next', 'value'),
 Input('opm-next', 'value'),
 Input('cagr-2-5', 'value'),
@@ -257,10 +277,11 @@ def dcf_valuation(*args, **kwargs):
                             'Price': [dcf_output_dict['last_price']],
                             'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
                             'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])]})
-        return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True)
+        return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True), []
     except Exception as e:
-        logger.error(e)
-        return [],[]
+        logger.exception(e)
+        return [],[], handler_data_message('See Error Message below:', 
+                                                traceback.format_exc())
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_reloader=False)  # Turn off reloader if inside Jupyter
