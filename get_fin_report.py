@@ -202,6 +202,14 @@ def get_string_from_number(num_value):
         return '{:.2f}'.format(num_value*100) + '%' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value*100) + '%)'
     return '{:.2f}'.format(num_value)
 
+def get_yahoo_fin_values(ticker):
+    urlmain = 'https://finance.yahoo.com/quote/'+ticker+'/'
+    s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
+    beta = float(s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '143'})[0].text)
+    next_earnings_date = s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '158'})[0].text
+    return next_earnings_date, beta
+
 # %%
 if __name__ == '__main__':
-    df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
+    # df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
+    pass

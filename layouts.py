@@ -36,8 +36,8 @@ dcflayout = html.Div([
         #     value='AAPL',
         #     placeholder='Start typing Ticker, press Enter')
         ), html.Div(id='ticker-allcaps'),
-        make_card('Status Message', 'success', html.P(id='status-info', children='Updating...')),
-        make_card('Supplemental Info', 'success', html.P(id='supp-info', children='Updating...'))
+        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', children='Updating...'))),
+        make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info', children='Updating...')))
         ]),
         dbc.Col([
         make_card('DCF Inputs - Company factors', 'info', dbc.Form([
@@ -69,7 +69,7 @@ dcflayout = html.Div([
             dcc.Slider(id="cost-of-cap", min=0, max=15, step=0.25, value=8.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'}),
         ])),
-        make_card('DCF Outputs', 'success', html.Div(id="dcf-data"))
+        make_card('DCF Outputs', 'success', dbc.Spinner(html.Div(id="dcf-data")))
         ]),
     ]), #row 1
     # Element for Graph plot of KPIndicators
