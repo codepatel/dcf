@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
 from app import app, server
-from layouts import navheader, dcflayout, sectorlayout
+from layouts import navheader, tabheader, dcflayout, sectorlayout
 import callbacks
 
 if not os.path.exists('tmp'):   # use /tmp for logging and caching
@@ -14,7 +14,7 @@ if not os.path.exists('tmp'):   # use /tmp for logging and caching
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
+    html.Div(id="page-content")
 ])
 
 @app.callback(Output('page-content', 'children'),
@@ -26,6 +26,14 @@ def display_page(pathname):
          return sectorlayout
     else:
         return navheader
+
+# @app.callback(Output("tab-content", "children"), [Input("tabs", "active_tab")])
+# def switch_tab(at):
+#     if at == "tab-dcf":
+#         return dcflayout
+#     elif at == "tab-sector":
+#         return sectorlayout
+#     return html.P("This shouldn't ever be displayed...")
 
 if __name__ == '__main__':
     app.run_server(debug=bool(strtobool(os.environ.get('DEBUG', 'False'))), use_reloader=False) # Turn off reloader if inside Jupyter

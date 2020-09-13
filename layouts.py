@@ -8,13 +8,24 @@ from dash_utils import make_card, ticker_inputs, make_item, make_social_media_sh
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
 
 navheader = dbc.Nav([
-        dbc.NavLink("DCF Valuation Analysis", href="/apps/dcf"),
-        dbc.NavLink("Sector Value Analysis", href="/apps/sector")
+                dbc.NavLink("DCF Valuation Analysis", href="/apps/dcf"),
+                dbc.NavLink("Sector Value Analysis", href="/apps/sector"),
+            ])
+
+tabheader = html.Div([
+        dbc.Tabs([
+                dbc.Tab(label="DCF Valuation Analysis", tab_id="tab-dcf"),
+                dbc.Tab(label="Sector Value Analysis", tab_id="tab-sector"),
+            ],
+            id="tabs",
+            active_tab="tab-dcf",
+        ),
+        html.Div(id="tab-content"),
     ])
 
 dcflayout = html.Div([
-    html.H3('DCF Valuation Analysis'),
     navheader,
+    # html.H3('DCF Valuation Analysis'),
     # MD text area Element for Introduction
     dbc.Row([dbc.Col(
         [dcc.Markdown(children='''
@@ -144,8 +155,8 @@ dcflayout = html.Div([
 ])
 
 sectorlayout = html.Div([
-    html.H3('Sector Value Analysis'),
     navheader,
+    # html.H3('Sector Value Analysis'),
     # MD text area Element for Introduction
     dbc.Row([dbc.Col(
         [dcc.Markdown(children='''
