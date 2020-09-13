@@ -143,3 +143,8 @@ def make_social_media_share():
         ]),
         #dbc.Card([])    # empty card at end as spacer
     ])
+
+def replace_newline_br_tag(str_with_newlines):
+    str_list = str_with_newlines.split('\n')
+    nested_list = [[html.P(s), html.Br()] for s in str_list]
+    return [item for sublist in nested_list for item in sublist]

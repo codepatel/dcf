@@ -1,11 +1,11 @@
-from functools import lru_cache
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 from datetime import date
 from time import sleep
+# from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 
-@lru_cache(maxsize = 100)
+# @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 def get_financial_report(ticker):
 # try:
     urlincome = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials'
