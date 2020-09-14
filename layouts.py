@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 import dash_table as dt
 # Local imports
 from dash_utils import make_card, ticker_inputs, make_item, make_social_media_share
+from dynamic_layouts import get_dcf_current_year_input_overrides, get_other_input_overrides
 
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
 
@@ -97,7 +98,7 @@ dcflayout = html.Div([
         html.H6('Select Parameter(s) to show trend over the past periods'),
         dcc.Dropdown(
                 id='select-column',
-                value=['ROCE', 'Sales-to-Capital', 'Net Profit Margin'],
+                value=['ROCE(%)', 'Sales-to-Capital(%)', 'Net Profit Margin(%)'],
                 multi=True
         ),
         dbc.Spinner(dcc.Graph(
@@ -107,25 +108,25 @@ dcflayout = html.Div([
         
     ]), # row 2
     dbc.Row([
-        dbc.Col(make_card("Intrinsic Value DCF Valuation", "warning", 
-        dcc.Markdown(children='''
-        **Assumptions for DCF:**\n
-            1. TERMINAL_YEAR_LENGTH = 10
-            2. TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
-            3. CONVERGENCE_PERIOD = 3
-            4. MARGINAL_TAX_RATE = 0.29
-            5. PROBABILITY_OF_FAILURE = 0.05
-            6. MINORITY_INTERESTS = 0
-            7. NONOPERATING_ASSETS = 0
-            8. OPTIONS_VALUE = 0
-        '''))
+        dbc.Col(make_card("Current Year Input (Use Latest 10K/10Q to Override)", "warning", 
+            get_dcf_current_year_input_overrides())
         ),
+        dbc.Col(make_card("Other Input Overrides", "warning", 
+            [get_other_input_overrides(),
+            html.Br(),
+            dcc.Markdown(children='''
+            **Other Assumptions for Intrinsic Value DCF Valuation:**\n
+                1. TERMINAL_YEAR_LENGTH = 10
+                2. TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
+            '''),
+            dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary', block=True)
+        ])),
         dbc.Col([
             make_card("Notes/Commentary", "primary",
             dbc.Textarea(bs_size="lg", placeholder='Enter your notes and commentary on the analysis')
             )
         ])
-    ]), # row 3
+    ],form=True), # row 3
     dbc.Row([
         dbc.Col([
             make_card("DCF table (2-stage Terminal value after 10 years) ", "secondary", 
@@ -147,8 +148,7 @@ dcflayout = html.Div([
         1. Only non-financial companies (neither banks nor insurance companies)
         2. NOLs are not accounted for in DCF valuation (to be improved in future release)
         3. Cost of Capital is fixed for the timeline of valuation and not linked to the Cost of Capital worksheet and the Country Equity Risk Premium look-up (to be improved in future release and linked to source CSV if available)
-        4. Probability of failure for the firm and Proceeds if so is not considered (yet!)
-        5. Employee Options Value Impact is not considered (yet!)
+        4. Probability of failure for the firm assumes proceeds are 50 cents on the $ of Present Value.
         ''')
         )
     ])  # footer row

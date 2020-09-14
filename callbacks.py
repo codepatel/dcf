@@ -1,5 +1,3 @@
-import os
-import logging
 from pathlib import Path
 from time import sleep
 import json
@@ -14,20 +12,13 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 # from iexfinance.stocks import Stock
 # Local imports
-# from index import logger
+from __init__ import logger
 from app import app, cache
 from dash_utils import make_table, replace_str_element_w_dash_component
 from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
 
 # Delete pyc: find . -name \*.pyc -delete
-
-logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
-                datefmt='%Y-%m-%d_%I:%M:%S_%p',
-                filename=os.path.expandvars('./tmp/app_DCFoutput.log'),
-                filemode='w',
-                level=logging.INFO)
-logger = logging.getLogger()
 
 HERE = Path(__file__).parent
 TIMEOUT = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
@@ -144,7 +135,8 @@ def update_graph(column_name, df_dict):
     if not df_dict:
         return {}
     try:
-        df = pd.DataFrame.from_dict(df_dict).applymap(get_number_from_string)
+        df = pd.DataFrame.from_dict(df_dict)
+        df = pd.concat([df.iloc[:,0], df.iloc[:,1:].applymap(get_number_from_string)], axis=1)
         for col in list(df.columns):
             if '%' in col:  # scale up ratio by 100 if unit is %
                 df[col] = df[col]*100
@@ -175,7 +167,18 @@ Input('sales-to-cap', 'value'),
 Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value'),
 Input('cost-of-cap', 'value'),
-])
+Input('run-dcf', 'n_clicks'),
+Input('year0-revenue', 'value'),
+Input('year0-randd', 'value'),
+Input('year0-capex', 'value'),
+Input('year0-ebit', 'value'),
+Input('year0-rgr', 'value'),
+Input('minority-interests', 'value'),
+Input('nonoperating-assets', 'value'),
+Input('options-value', 'value')],
+[State('convergence-year', 'value'),
+State('marginal-tax', 'value'),
+State('prob-failure', 'value'),])
 def dcf_valuation(*args, **kwargs):    
     if not args[0]:
         return [], [], dash.no_update

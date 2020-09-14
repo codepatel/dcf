@@ -4,6 +4,8 @@ import requests
 from datetime import date
 from time import sleep
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
+# Local imports
+from __init__ import logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 def get_financial_report(ticker):
@@ -66,10 +68,11 @@ def get_financial_report(ticker):
             'Capital Expenditures($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(date.today().year-5,date.today().year+1))
     df.reset_index(inplace=True)
-    df['Net Profit Margin'] = df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)
+    df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)
     df['Capital Employed($)'] = df['Total Assets($)'].apply(get_number_from_string) - df['Total Current Liabilities($)'].apply(get_number_from_string)
-    df['Sales-to-Capital'] = df['Revenue($)'].apply(get_number_from_string) / df['Capital Employed($)'].apply(get_number_from_string)
-    df['ROCE'] = df['Net Income($)'].apply(get_number_from_string) / df['Capital Employed($)'].apply(get_number_from_string)
+    df['Sales-to-Capital(%)'] = (df['Revenue($)'].apply(get_number_from_string) / df['Capital Employed($)']).apply(get_string_from_number)
+    df['ROCE(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Capital Employed($)']).apply(get_string_from_number)
+    df['Capital Employed($)'] = df['Capital Employed($)'].apply(get_string_from_number)
 
     try:
         lastprice = finsoup['ais'].findAll('p', {'class': 'data bgLast'})[0].text
@@ -175,19 +178,20 @@ def get_number_from_string(str_value):
     try:
         if isinstance(str_value, str):
             str_value = str_value.replace(',', '')  # remove commas for formatting
-        if str_value == '-' or str_value == '--':
-            return None
-        else:
-            try:
-                return float(str_value)
-            except ValueError:
-                units_dict = {'M': 1e6, 'B': 1e9, 'T': 1e12, '%': 0.01}
-                if str_value[0] == '(': # negative number in parenthesis format
-                    return -float(str_value[1:-2]) * units_dict[str_value[-2]]
-                else:
+            if str_value[0] == '(': # negative number in parenthesis format
+                str_value = '-' + str_value[1:-1]
+            if str_value == '-' or str_value == '--':
+                return None
+            else:
+                try:
+                    return float(str_value)
+                except ValueError:
+                    units_dict = {'M': 1e6, 'B': 1e9, 'T': 1e12, '%': 0.01}
                     return float(str_value[:-1]) * units_dict[str_value[-1]]
+        else:
+            raise ValueError('Need a string input to convert to number!')
     except Exception as e:
-        print(e)
+        logger.exception(e)
         return None
 
 
@@ -204,10 +208,15 @@ def get_string_from_number(num_value):
 
 def get_yahoo_fin_values(ticker):
     urlmain = 'https://finance.yahoo.com/quote/'+ticker+'/'
-    s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
-    beta = float(s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '143'})[0].text)
-    next_earnings_date = s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '158'})[0].text
-    return next_earnings_date, beta
+    try:
+        s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
+        beta = float(s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '143'})[0].text)
+        next_earnings_date = s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '158'})[0].text
+        return next_earnings_date, beta
+    except Exception as e:
+        logger.exception(e)
+        return 'N/A', 1
+
 
 # %%
 if __name__ == '__main__':

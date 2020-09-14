@@ -5,18 +5,13 @@ from get_fin_report import get_number_from_string, get_string_from_number
 # Assumptions for DCF:
 TERMINAL_YEAR_LENGTH = 10
 TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
-CONVERGENCE_PERIOD = 3
-MARGINAL_TAX_RATE = 0.29
-PROBABILITY_OF_FAILURE = 0.05
-MINORITY_INTERESTS = 0
-NONOPERATING_ASSETS = 0
-OPTIONS_VALUE = 0
 
 def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
-                    tax_rate='15', riskfree_rate='3', cost_of_cap='8.5'):
+                    tax_rate='15', riskfree_rate='3', cost_of_cap='8.5', 
+                    run_dcf_button_clicks=None, *args):
     last_price = float(handler_data[0]['status-info'].split(' @')[0].replace(',', ''))
-    df = pd.DataFrame.from_dict(df_dict)
+
     rgr_next = float(rgr_next)/100
     opm_next = float(opm_next)/100
     cagr_2_5 = float(cagr_2_5)/100
@@ -30,13 +25,22 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
         terminal_growth_rate = riskfree_rate
         delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
 
-    year0_revenue = get_number_from_string(df['Revenue($)'].iloc[-1])
-    year0_randd = get_number_from_string(df['Research & Development($)'].iloc[-1])
-    year0_ebit = get_number_from_string(df['Pretax Income($)'].iloc[-1]) + year0_randd
+    # From dynamic updates of update_current_year_values
+    year0_revenue = args[0]*1e6
+    year0_randd = args[1]*1e6
+    year0_capex = args[2]*1e6
+    year0_ebit = args[3]*1e6
+    year0_rgr = args[4]/100
+    minority_interests = args[5]*1e6
+    nonoperating_assets = args[6]*1e6
+    options_value = args[7]*1e6
+    # From dynamic updates of user input
+    convergence_year = args[8]
+    marginal_tax_rate = args[9]/100
+    probability_of_failure = args[10]/100
+
     year0_margin = year0_ebit/year0_revenue
-    year0_rgr = (get_number_from_string(df['Revenue($)'].iloc[-2])/get_number_from_string(df['Revenue($)'].iloc[0])) ** (1/(len(df)-2)) - 1
-    year0_capex = -get_number_from_string(df['Capital Expenditures($)'].iloc[-1])
-    year0_ebitlesstax = get_number_from_string(df['Pretax Income($)'].iloc[-1]) * (1-tax_rate) + year0_randd
+    year0_ebitlesstax = (year0_ebit - year0_randd) * (1-tax_rate) + year0_randd
     year0_reinvestment = year0_capex + year0_randd
     year0_fcf = year0_ebitlesstax - year0_reinvestment
 
@@ -46,8 +50,8 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
                     [cagr_2_5-(delta_rate_late_stage * p) for p in range (1, TERMINAL_YEAR_LENGTH-5+1)] + [terminal_growth_rate],
         'EBIT+R&D($)': [year0_ebit],
         'Operating Margin(%)': [year0_margin, opm_next] + 
-                    [opm_target if p>CONVERGENCE_PERIOD else opm_target-((opm_target-year0_margin)/CONVERGENCE_PERIOD)*(CONVERGENCE_PERIOD-p) for p in range (2, TERMINAL_YEAR_LENGTH+2)],
-        'Tax Rate(%)': [tax_rate] * 6 + [tax_rate + (MARGINAL_TAX_RATE - tax_rate) * p/5 for p in range(1, TERMINAL_YEAR_LENGTH-5+1)] + [MARGINAL_TAX_RATE],
+                    [opm_target if p>convergence_year else opm_target-((opm_target-year0_margin)/convergence_year)*(convergence_year-p) for p in range (2, TERMINAL_YEAR_LENGTH+2)],
+        'Tax Rate(%)': [tax_rate] * 6 + [tax_rate + (marginal_tax_rate - tax_rate) * p/5 for p in range(1, TERMINAL_YEAR_LENGTH-5+1)] + [marginal_tax_rate],
         'EBIT(1-T)($)': [year0_ebitlesstax],
         'Reinvestment($)': [year0_reinvestment],
         'FCF($)': [year0_fcf],
@@ -68,13 +72,13 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     dcf_output_dict['terminal_value'] = dcf_output_dict['terminal_FCF'] / (cost_of_cap - terminal_growth_rate)
     dcf_output_dict['PV_terminal_value'] = dcf_output_dict['terminal_value'] * dcftable['CDF(%)'][TERMINAL_YEAR_LENGTH]
     dcf_output_dict['PV_sum'] = sum(dcftable['PV_FCF($)'][1:TERMINAL_YEAR_LENGTH+1]) + dcf_output_dict['PV_terminal_value']
-    dcf_output_dict['value_operating_assets'] = (1-PROBABILITY_OF_FAILURE) * dcf_output_dict['PV_sum'] + PROBABILITY_OF_FAILURE * (dcf_output_dict['PV_sum']/2)
-    dcf_output_dict['book_value_LTdebt'] = get_number_from_string(df['Longterm Debt($)'].iloc[-1])
-    dcf_output_dict['cash'] = get_number_from_string(df['Cash($)'].iloc[-1])
+    dcf_output_dict['value_operating_assets'] = (1-probability_of_failure) * dcf_output_dict['PV_sum'] + probability_of_failure * (dcf_output_dict['PV_sum']/2)
+    dcf_output_dict['book_value_LTdebt'] = get_number_from_string(df_dict[-1]['Longterm Debt($)'])
+    dcf_output_dict['cash'] = get_number_from_string(df_dict[-1]['Cash($)'])
 
-    dcf_output_dict['equity_value'] = dcf_output_dict['value_operating_assets'] - dcf_output_dict['book_value_LTdebt'] - MINORITY_INTERESTS + dcf_output_dict['cash'] + NONOPERATING_ASSETS
-    dcf_output_dict['common_equity_value'] = dcf_output_dict['equity_value'] - OPTIONS_VALUE
-    dcf_output_dict['outstanding_shares'] = get_number_from_string(df['Shares Outstanding'].iloc[-1])
+    dcf_output_dict['equity_value'] = dcf_output_dict['value_operating_assets'] - dcf_output_dict['book_value_LTdebt'] - minority_interests + dcf_output_dict['cash'] + nonoperating_assets
+    dcf_output_dict['common_equity_value'] = dcf_output_dict['equity_value'] - options_value
+    dcf_output_dict['outstanding_shares'] = get_number_from_string(df_dict[-1]['Shares Outstanding'])
     dcf_output_dict['estimated_value_per_share'] = dcf_output_dict['common_equity_value']/dcf_output_dict['outstanding_shares']
     dcf_output_dict['last_price'] = last_price
 

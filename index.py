@@ -9,9 +9,6 @@ from app import app, server
 from layouts import navheader, tabheader, dcflayout, sectorlayout
 import callbacks
 
-if not os.path.exists('tmp'):   # use /tmp for logging and caching
-    os.makedirs('tmp')
-
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id="page-content")
