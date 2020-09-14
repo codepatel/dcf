@@ -5,9 +5,11 @@ from datetime import date
 from time import sleep
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import logger
+from __init__ import logger, TIMEOUT_12HR
+from app import cache
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
+@cache.memoize(timeout=TIMEOUT_12HR)
 def get_financial_report(ticker):
 # try:
     urlincome = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials'
@@ -206,6 +208,7 @@ def get_string_from_number(num_value):
         return '{:.2f}'.format(num_value*100) + '%' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value*100) + '%)'
     return '{:.2f}'.format(num_value)
 
+@cache.memoize(timeout=TIMEOUT_12HR)
 def get_yahoo_fin_values(ticker):
     urlmain = 'https://finance.yahoo.com/quote/'+ticker+'/'
     try:
@@ -215,7 +218,7 @@ def get_yahoo_fin_values(ticker):
         return next_earnings_date, beta
     except Exception as e:
         logger.exception(e)
-        return 'N/A', 1
+        return 'N/A', []
 
 
 # %%

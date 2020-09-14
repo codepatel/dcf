@@ -12,7 +12,7 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 # from iexfinance.stocks import Stock
 # Local imports
-from __init__ import logger
+from __init__ import logger, HERE, TIMEOUT_12HR
 from app import app, cache
 from dash_utils import make_table, replace_str_element_w_dash_component
 from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
@@ -20,10 +20,7 @@ from get_dcf_valuation import get_dcf_df
 
 # Delete pyc: find . -name \*.pyc -delete
 
-HERE = Path(__file__).parent
-TIMEOUT = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
-
-@cache.memoize(timeout=TIMEOUT*2*30)    # Use Cache Timeout of 30 days for symbols data
+@cache.memoize(timeout=TIMEOUT_12HR*2*30)    # Use Cache Timeout of 30 days for symbols data
 def get_symbols():
     with open(Path(HERE, 'assets', 'symbols.json')) as symfile:
         symdata = json.load(symfile)
@@ -92,7 +89,6 @@ def check_ticker_validity(ticker):
         return False, True, '', handler_data_message('See Error Message(s) below:', 
                                                 traceback.format_exc())
 
-@cache.memoize(timeout=TIMEOUT)
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
 Output('select-column', 'options'),
