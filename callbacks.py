@@ -91,13 +91,14 @@ def check_ticker_validity(ticker):
 
 @app.callback([Output('fin-table', 'children'),
 Output('fin-df', 'data'),
+Output('stats-df', 'data'),
 Output('select-column', 'options'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
 [State('ticker-allcaps', 'children')])
 def fin_report(ticker_valid, ticker): 
     if not ticker_valid:
-        return [], [], [], dash.no_update
+        return [], [], [], [], dash.no_update
     try:
         ticker_allcaps = ticker.split(': ')[-1]
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
@@ -106,9 +107,17 @@ def fin_report(ticker_valid, ticker):
         table = dbc.Table.from_dataframe(df[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
                 'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Capital Expenditures($)']], 
                 striped=True, bordered=True, hover=True)
+        
+        stats_record = {'ticker': ticker_allcaps,
+                        'lastprice': float(lastprice.replace(',','')),
+                        'lastpricetime': lastprice_time,
+                        'beta': beta,
+                        'next_earnings_date': next_earnings_date
+                        }
+        
         supp_data_notes = f'MRQ report ending: {report_date_note},\n' \
             f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
-            f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * float(lastprice.replace(',','')))},\n" \
+            f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
             f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
             f"Beta: {beta},\n" \
             f"Next Earnings date: {next_earnings_date},\n"
@@ -117,11 +126,11 @@ def fin_report(ticker_valid, ticker):
                         'supp-data': supp_data_notes}
         select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
 
-        return table, df.to_dict('records'), select_column_options, [handler_data]
+        return table, df.to_dict('records'), [stats_record], select_column_options, [handler_data]
         # 'records' is more "compatible" than 'series'
     except Exception as e:       
         logger.exception(e)
-        return [], [], [], handler_data_message('See Error Message(s) below:', 
+        return [], [], [], [], handler_data_message('See Error Message(s) below:', 
                                                 traceback.format_exc())
 
 @app.callback(Output('plot-indicators', 'figure'),

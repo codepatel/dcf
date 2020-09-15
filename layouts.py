@@ -52,23 +52,39 @@ dcflayout = html.Div([
         make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info', children='Updating...')))
         ]),
         dbc.Col([
-        make_card('DCF Inputs - Company factors', 'info', dbc.Form([
-            dbc.Label("Revenue Growth Rate (%) for next year (select range: -50 to 50)", html_for="rgr-next"),
-            dcc.Slider(id="rgr-next", min=-40, max=20, step=0.1, value=0, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
-            dbc.Label("Operating Margin (%) for next year (select range: -10 to 30)", html_for="opm-next"),
-            dcc.Slider(id="opm-next", min=-10, max=30, step=0.1, value=10, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
-            dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
-            dcc.Slider(id="cagr-2-5", min=0, max=15, step=0.1, value=5, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
-            dbc.Label("Target Pre-Tax Operating Margin (%) in business model (select range: 0 to 50)", html_for="opm-target"),
-            dcc.Slider(id="opm-target", min=0, max=50, step=0.1, value=20, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
-            dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 4)", html_for="sales-to-cap"),
-            dcc.Slider(id="sales-to-cap", min=0, max=4, step=0.05, value=1, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
-        ]))]),
+        make_card('DCF Inputs - Company factors', 'info', dbc.Tabs([
+                dbc.Tab(
+                    dbc.Form([
+                        dbc.Label("Revenue Growth Rate (%) for next year", html_for="rgr-next"),
+                        dbc.Input(id="rgr-next", type="number", value=0, min=-50, step=1, placeholder="Enter number", debounce=True
+                                ),
+                        dbc.Label("Operating Margin (%) for next year excl. Reinvestment", html_for="opm-next"),
+                        dbc.Input(id="opm-next", type="number", value=10, max=50, step=1, placeholder="Enter number", debounce=True
+                                ),
+                        html.Br(),
+                        dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
+                        dcc.Slider(id="cagr-2-5", min=0, max=15, step=0.1, value=5, 
+                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        dbc.Label("Target Pre-Tax Operating Margin (%) in business model (select range: 0 to 50)", html_for="opm-target"),
+                        dcc.Slider(id="opm-target", min=0, max=50, step=0.1, value=20, 
+                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 4)", html_for="sales-to-cap"),
+                        dcc.Slider(id="sales-to-cap", min=0, max=4, step=0.05, value=1, 
+                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                    ]), label="GPE Levers", tab_id="tab-lever"
+                ),
+                dbc.Tab(
+                    dbc.Form([
+                        html.P('In future, calculate this based on discrete inputs. For now, enter it:'),
+                        html.Br(),
+                        dbc.Label("Equity Risk Premium (%)", html_for="erp-calculated"),
+                        dbc.Input(id="erp-calculated", type="number", value=6, min=0, max=10, step=0.01, placeholder="Enter number", debounce=True
+                                ),
+                    ]), label="ERP Calculation", tab_id="tab-erp"
+                ),
+            ], id="company-tabs", active_tab="tab-lever",
+            ))
+        ]),
         dbc.Col([
         make_card('DCF Inputs - Environmental factors', 'info', dbc.Form([
             dbc.Label("Effective Tax Rate (%) (select range: 0 to 30)", html_for="tax-rate"),
@@ -77,7 +93,7 @@ dcflayout = html.Div([
             dbc.Label("Riskfree Rate (%) (select range: 0 to 5)", html_for="riskfree-rate"),
             dcc.Slider(id="riskfree-rate", min=0, max=5, step=0.25, value=3.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'}),
-            dbc.Label("Cost of Capital (%) (select range: 0 to 12)", html_for="cost-of-cap"),
+            dbc.Label("Cost of Capital (%) (select range: 0 to 15)", html_for="cost-of-cap"),
             dcc.Slider(id="cost-of-cap", min=0, max=15, step=0.25, value=8.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'}),
         ])),
@@ -88,10 +104,12 @@ dcflayout = html.Div([
     dbc.Row([
         dbc.Col([
             make_card("Past records Financial table (Current Year is TTM/MRQ) ", "secondary", 
-            dbc.Spinner(html.Div(id="fin-table"))),  dt.DataTable(id="fin-df"), 
-                dt.DataTable(id="handler-ticker-valid"),
-                dt.DataTable(id="handler-past-data"), 
-                dt.DataTable(id="handler-dcf-data"),
+            dbc.Spinner(html.Div(id="fin-table"))),  
+            dt.DataTable(id="fin-df"),
+            dt.DataTable(id="stats-df"),
+            dt.DataTable(id="handler-ticker-valid"),
+            dt.DataTable(id="handler-past-data"), 
+            dt.DataTable(id="handler-dcf-data"),
             html.Small('Data source: https://www.marketwatch.com/ Copyright 2020 FactSet Research Systems Inc. All rights reserved. Source FactSet Fundamentals')
         ]),
         dbc.Col([html.Div([
@@ -118,6 +136,8 @@ dcflayout = html.Div([
             **Other Assumptions for Intrinsic Value DCF Valuation:**\n
                 1. TERMINAL_YEAR_LENGTH = 10
                 2. TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
+                3. No Preferred stock/dividends in capital structure
+                4. No Convertible debt/equity portion in capital structure
             '''),
             dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary', block=True)
         ])),
