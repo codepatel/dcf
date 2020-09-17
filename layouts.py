@@ -11,7 +11,7 @@ from dynamic_layouts import get_dcf_current_year_input_overrides, get_other_inpu
 navheader = dbc.Nav([
                 dbc.NavLink("DCF Valuation Analysis", href="/apps/dcf"),
                 dbc.NavLink("Sector Value Analysis", href="/apps/sector"),
-            ])
+            ], pills=True)
 
 tabheader = html.Div([
         dbc.Tabs([
@@ -71,16 +71,16 @@ dcflayout = html.Div([
                         dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 4)", html_for="sales-to-cap"),
                         dcc.Slider(id="sales-to-cap", min=0, max=4, step=0.05, value=1, 
                         tooltip={'always_visible': True, 'placement': 'topRight'}),
-                    ]), label="GPE Levers", tab_id="tab-lever"
+                    ]), label="GPE Levers", tab_id="tab-lever", label_style={"color": "#00AEF9"}
                 ),
                 dbc.Tab(
                     dbc.Form([
-                        html.P('In future, calculate this based on discrete inputs. For now, enter it:'),
+                        html.P('In future, calculate Equity Risk Premium based on discrete inputs. For now, enter ERP:'),
                         html.Br(),
                         dbc.Label("Equity Risk Premium (%)", html_for="erp-calculated"),
                         dbc.Input(id="erp-calculated", type="number", value=6, min=0, max=10, step=0.01, placeholder="Enter number", debounce=True
                                 ),
-                    ]), label="ERP Calculation", tab_id="tab-erp"
+                    ]), label="ERP Calculation", tab_id="tab-erp", label_style={"color": "#00AEF9"}
                 ),
             ], id="company-tabs", active_tab="tab-lever",
             ))

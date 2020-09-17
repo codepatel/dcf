@@ -15,7 +15,8 @@ app.config.suppress_callback_exceptions = True
 
 cache = Cache(app.server, config={
     'CACHE_TYPE': 'filesystem',
-    'CACHE_DIR': 'tmp'
+    'CACHE_DIR': 'tmp',
+    'CACHE_THRESHOLD': 1000
 })
 
 

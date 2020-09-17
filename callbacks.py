@@ -72,7 +72,7 @@ def check_ticker_validity(ticker):
         if not ticker:
             raise ValueError("Ticker Value is Empty, please Type Ticker, press Enter or Tab to continue analysis.")
         ticker_allcaps = ticker.upper()
-        if ticker.isalpha() and ticker_allcaps in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
+        if ticker_allcaps in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
             is_valid_ticker = True
             return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_allcaps, [{'status-info': ticker_dict()[ticker_allcaps] + ' :\nLast Price ', 
                                                             'supp-data': ''}]

@@ -41,6 +41,9 @@ def get_financial_report(ticker):
 
     #get the data from the fin statement lists and use helper function get_element to index for format line#
     revenue = get_element(isdata_lines['revenue'],0) + get_element(isdata_lines['revenue'],2)
+    if isdata_lines['revenue'][1][0] != '-':    # for Financial companies top-line
+        non_interest_income = get_element(isdata_lines['revenue'],1) + get_element(isdata_lines['revenue'],3)
+        revenue = [get_string_from_number(get_number_from_string(revenue[y])+get_number_from_string(nii)) for y, nii in enumerate(non_interest_income)]
     eps = get_element(isdata_lines['eps'],0) + get_element(isdata_lines['eps'],2)
     epsGrowth = get_element(isdata_lines['eps'],1) + get_element(isdata_lines['eps'],3)
     preTaxIncome = get_element(isdata_lines['pretaxincome'],0) + get_element(isdata_lines['pretaxincome'],2)
@@ -51,13 +54,19 @@ def get_financial_report(ticker):
     outstanding_shares = get_element(isdata_lines['shares'],0) + get_element(isdata_lines['shares'],1)
 
     shareholderEquity = get_element(bsdata_lines['equity'],0) + get_element(bsdata_lines['equity'],2)
-    longtermDebt = get_element(bsdata_lines['ltd'],0) + get_element(bsdata_lines['ltd'],2)
+    longtermDebt = get_element(bsdata_lines['ltd'],0) + get_element(bsdata_lines['ltd'],1)
     totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],6)
+    if get_number_from_string(totalAssets[0]) < 10:
+        totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],4)
     intangibleAssets = get_element(bsdata_lines['intangibleassets'],0) + get_element(bsdata_lines['intangibleassets'],1)
     currentLiabilities = get_element(bsdata_lines['currentliab'],0) + get_element(bsdata_lines['currentliab'],1)
+    if all([c == '-' for c in currentLiabilities]):
+        currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
 
-    capEx = get_element(cfdata_lines['capex'],1) + get_element(cfdata_lines['capex'],6)
+    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],5)
+    if all([c == '-' for c in capEx]):
+        capEx = get_element(cfdata_lines['capex'],3) + get_element(cfdata_lines['capex'],7)
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
@@ -99,7 +108,8 @@ def walk_row(titlerow):
 
 def get_income_data(data_titles, data_lines):
     def build_income_list(data_list):
-        if 'Revenue' in title.text or 'Sales' in title.text or 'Net Interest Income' in title.text:
+        if 'Revenue' in title.text or 'Sales' in title.text \
+                or 'Net Interest Income after Provision' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
         if 'EPS (Basic)' in title.text:
             data_lines['eps'].append(data_list)
@@ -135,7 +145,7 @@ def get_balancesheet_data(data_titles, data_lines):
     def build_balancesheet_list(data_list):
         if 'Total Shareholders\' Equity' in title.text:
             data_lines['equity'].append(data_list)
-        if 'Long-Term Debt' in title.text:
+        if 'Debt excl. Capital' in title.text:
             data_lines['ltd'].append(data_list)
         if 'Total Assets' in title.text:
             data_lines['totalassets'].append(data_list)
@@ -143,7 +153,7 @@ def get_balancesheet_data(data_titles, data_lines):
             data_lines['intangibleassets'].append(data_list)
         if 'Total Current Liabilities' in title.text:
             data_lines['currentliab'].append(data_list)
-        if 'Cash & Short Term Investments' in title.text:
+        if 'Cash & Short Term Investments' in title.text or 'Cash & Due from' in title.text:
             data_lines['cash'].append(data_list)
     
     for title in data_titles['abs']:
@@ -155,7 +165,7 @@ def get_balancesheet_data(data_titles, data_lines):
     
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
-        if 'Capital Expenditures' in title.text:
+        if 'Capital Expenditures' in title.text or 'Increase in Loans' in title.text:
             data_lines['capex'].append(data_list)
         if 'Free Cash Flow' in title.text:
             data_lines['fcf'].append(data_list)
@@ -208,7 +218,7 @@ def get_string_from_number(num_value):
         return '{:.2f}'.format(num_value*100) + '%' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value*100) + '%)'
     return '{:.2f}'.format(num_value)
 
-@cache.memoize(timeout=TIMEOUT_12HR)
+@cache.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
 def get_yahoo_fin_values(ticker):
     urlmain = 'https://finance.yahoo.com/quote/'+ticker+'/'
     try:
