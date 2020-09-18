@@ -33,4 +33,4 @@ def display_page(pathname):
 #     return html.P("This shouldn't ever be displayed...")
 
 if __name__ == '__main__':
-    app.run_server(debug=bool(strtobool(os.environ.get('DEBUG', 'False'))), use_reloader=False) # Turn off reloader if inside Jupyter
+    app.run_server(debug=bool(strtobool(os.environ.get('DEBUG', 'False'))), use_reloader=False) # Turn off reloader if inside Jupyter or using interactive debugging

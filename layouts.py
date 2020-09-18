@@ -48,8 +48,8 @@ dcflayout = html.Div([
         #     value='AAPL',
         #     placeholder='Start typing Ticker, press Enter')
         ), html.Div(id='ticker-allcaps'),
-        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', children='Updating...'))),
-        make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info', children='Updating...')))
+        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}))),
+        make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info')))
         ]),
         dbc.Col([
         make_card('DCF Inputs - Company factors', 'info', dbc.Tabs([

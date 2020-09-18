@@ -10,6 +10,7 @@ server = flask.Flask(__name__)
 app = dash.Dash(__name__, server = server, 
     meta_tags=[{ "content": "width=device-width"}], 
     external_stylesheets=[dbc.themes.BOOTSTRAP])
+app.title = 'Equity Valuation Analysis'
 #used for dynamic callbacks
 app.config.suppress_callback_exceptions = True
 

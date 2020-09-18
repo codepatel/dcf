@@ -44,23 +44,30 @@ def handler_data_message(title, exception_obj):
 Output('supp-info', 'children')], 
 [Input('handler-ticker-valid', 'data'),
 Input('handler-past-data', 'data'),
-Input('handler-dcf-data', 'data')])
-def refresh_for_update(handler_ticker, handler_past, handler_dcf):
+Input('handler-dcf-data', 'data'),
+Input('status-info', 'loading_state')])
+def refresh_for_update(handler_ticker, handler_past, handler_dcf, status_loading_dict):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
     status_msg = []
     supp_msg = []
-    for c in ctx.triggered:
-        if c['value']:
-            status = c['value'][0]['status-info']   # always 1 element is sent by handler, so use 0
-            status_msg.append(status)
-            supp = c['value'][0]['supp-data']
-            if isinstance(status, str):
-                supp_msg.extend(replace_str_element_w_dash_component(supp, repl_dash_component=[]))
-            else:   # it is a dcc or html component, get children
-                supp_msg.extend(replace_str_element_w_dash_component(supp['props']['children']))
-    return status_msg, supp_msg
+    triggered_elements = [c['prop_id'] for c in ctx.triggered]
+    if 'handler-ticker-valid.data' in triggered_elements and ctx.inputs['status-info.loading_state']['is_loading']:
+        return ctx.inputs['handler-ticker-valid.data'][0]['status-info'], ctx.inputs['handler-ticker-valid.data'][0]['supp-data']
+        # return 'Updating...', 'Updating...'
+    else:
+        update_data = [d for c, d in ctx.inputs.items() if '.data' in c]
+        for d in update_data:
+            if d:
+                status = d[0]['status-info']   # always 1 element is sent by handler, so use 0
+                status_msg.append(status)
+                supp = d[0]['supp-data']
+                if isinstance(status, str):
+                    supp_msg.extend(replace_str_element_w_dash_component(supp, repl_dash_component=[]))
+                else:   # it is a dcc or html component, get children
+                    supp_msg.extend(replace_str_element_w_dash_component(supp['props']['children']))
+        return status_msg, supp_msg
 
 @app.callback([Output("ticker-input", "valid"), 
 Output("ticker-input", "invalid"),
@@ -93,12 +100,13 @@ def check_ticker_validity(ticker):
 Output('fin-df', 'data'),
 Output('stats-df', 'data'),
 Output('select-column', 'options'),
+Output('status-info', 'loading_state'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
 [State('ticker-allcaps', 'children')])
 def fin_report(ticker_valid, ticker): 
     if not ticker_valid:
-        return [], [], [], [], dash.no_update
+        return [], [], [], [], {'is_loading': True}, dash.no_update
     try:
         ticker_allcaps = ticker.split(': ')[-1]
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
@@ -126,12 +134,12 @@ def fin_report(ticker_valid, ticker):
                         'supp-data': supp_data_notes}
         select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
 
-        return table, df.to_dict('records'), [stats_record], select_column_options, [handler_data]
+        return table, df.to_dict('records'), [stats_record], select_column_options, {'is_loading': False}, [handler_data]
         # 'records' is more "compatible" than 'series'
     except Exception as e:       
         logger.exception(e)
-        return [], [], [], [], handler_data_message('See Error Message(s) below:', 
-                                                traceback.format_exc())
+        return [], [], [], [], {'is_loading': True}, handler_data_message('See Error Message(s) below:', 
+                                                                traceback.format_exc())
 
 @app.callback(Output('plot-indicators', 'figure'),
 [Input('select-column', 'value'),
