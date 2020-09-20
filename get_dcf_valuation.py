@@ -75,7 +75,7 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     dcf_output_dict['PV_terminal_value'] = dcf_output_dict['terminal_value'] * dcftable['CDF(%)'][TERMINAL_YEAR_LENGTH]
     dcf_output_dict['PV_sum'] = sum(dcftable['PV_FCF($)'][1:TERMINAL_YEAR_LENGTH+1]) + dcf_output_dict['PV_terminal_value']
     dcf_output_dict['value_operating_assets'] = (1-probability_of_failure) * dcf_output_dict['PV_sum'] + probability_of_failure * (dcf_output_dict['PV_sum']/2)
-    dcf_output_dict['book_value_LTdebt'] = get_number_from_string(df_dict[-1]['Longterm Debt($)'])
+    dcf_output_dict['book_value_LTdebt'] = get_number_from_string(df_dict[-1]['Longterm Debt($)']) or 0
     dcf_output_dict['cash'] = get_number_from_string(df_dict[-1]['Cash($)']) or 0
 
     dcf_output_dict['equity_value'] = dcf_output_dict['value_operating_assets'] - dcf_output_dict['book_value_LTdebt'] - minority_interests + dcf_output_dict['cash'] + nonoperating_assets

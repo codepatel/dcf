@@ -94,7 +94,7 @@ dcflayout = html.Div([
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 35, 5)}),
             dbc.Label("Riskfree Rate (%) (select range: 0 to 5)", html_for="riskfree-rate"),
-            dcc.Slider(id="riskfree-rate", min=0, max=5, step=0.25, value=3.5, 
+            dcc.Slider(id="riskfree-rate", min=0, max=5, step=0.25, value=1.25, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 6)}),
             dbc.Label("Cost of Capital (%) (select range: 0 to 15)", html_for="cost-of-cap"),

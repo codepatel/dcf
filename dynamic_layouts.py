@@ -227,10 +227,10 @@ def get_other_input_overrides():
                     dbc.Label("Override default assumptions:"),
                     dbc.Checklist(
                     options=[
-                        {"label": "Terminal Growth Rate equal to Riskfree Rate", "value": 1},
+                        {"label": "Terminal Growth Rate = Riskfree Rate?", "value": 1},
                     ],
                     value=[],
-                    id="override-default-assmuptions",
+                    id="override-default-assumptions",
                     switch=True,
                     ),
                 ]
@@ -239,7 +239,7 @@ def get_other_input_overrides():
                 [
                     dbc.Label("Terminal Growth Rate Rate (%) (select range: 0 to 5)", html_for="terminal-growth-rate"),
                     dcc.Slider(id="terminal-growth-rate", min=0, max=5, step=0.25, value=3.5, 
-                    marks={v: str(v) for v in range(0, 6)}, disabled=True),
+                    marks={v: str(v) for v in range(0, 6)}, disabled=False),
                 ]
         )
     ])
@@ -334,7 +334,7 @@ def get_cost_of_capital(df_dict, stats_dict, *args):
         raise PreventUpdate
 
 @app.callback([Output('terminal-growth-rate', 'disabled')],
-[Input('override-default-assmuptions', 'value')])
+[Input('override-default-assumptions', 'value')])
 def override_assumptions(ovr_flag):
-    return [1 not in ovr_flag]
+    return [1 in ovr_flag]
 
