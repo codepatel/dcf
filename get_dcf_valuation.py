@@ -7,7 +7,7 @@ TERMINAL_YEAR_LENGTH = 10
 
 def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
-                    tax_rate='15', riskfree_rate='3', terminal_growth_rate='3', terminal_growth_eq_riskfree_rate=True, 
+                    tax_rate='15', riskfree_rate='3', terminal_growth_rate='3',  
                     cost_of_cap='8.5', run_dcf_button_clicks=None, *args):
     last_price = float(handler_data[0]['status-info'].split(' @')[0].replace(',', ''))
 
@@ -19,13 +19,6 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     riskfree_rate = float(riskfree_rate)/100
     cost_of_cap = float(cost_of_cap)/100
     sales_to_cap = float(sales_to_cap)
-
-    if terminal_growth_eq_riskfree_rate:
-        terminal_growth_rate = riskfree_rate
-    else:
-        terminal_growth_rate = float(terminal_growth_rate)/100
-    
-    delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
 
     # From dynamic updates of update_current_year_values
     year0_revenue = args[0]*1e6
@@ -40,6 +33,14 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     convergence_year = args[8]
     marginal_tax_rate = args[9]/100
     probability_of_failure = args[10]/100
+    terminal_growth_eq_riskfree_rate = args[11]
+
+    if terminal_growth_eq_riskfree_rate:
+        terminal_growth_rate = riskfree_rate
+    else:
+        terminal_growth_rate = float(terminal_growth_rate)/100
+    
+    delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
 
     year0_margin = year0_ebit/year0_revenue
     year0_ebitlesstax = (year0_ebit - year0_randd) * (1-tax_rate) + year0_randd

@@ -180,7 +180,6 @@ Input('sales-to-cap', 'value'),
 Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value'),
 Input('terminal-growth-rate', 'value'),
-Input('terminal-growth-rate', 'disabled'),
 Input('cost-of-cap', 'value'),
 Input('run-dcf', 'n_clicks'),
 Input('year0-revenue', 'value'),
@@ -193,7 +192,8 @@ Input('nonoperating-assets', 'value'),
 Input('options-value', 'value')],
 [State('convergence-year', 'value'),
 State('marginal-tax', 'value'),
-State('prob-failure', 'value'),])
+State('prob-failure', 'value'),
+State('terminal-growth-rate', 'disabled'),])
 def dcf_valuation(*args, **kwargs):    
     if not args[0]:
         return [], [], dash.no_update
