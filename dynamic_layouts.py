@@ -1,6 +1,7 @@
 from statistics import mean
 from app import app
 import dash_core_components as dcc
+import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
@@ -9,9 +10,9 @@ from __init__ import logger
 from get_fin_report import get_number_from_string
 
 def get_dcf_current_year_input_overrides():
-    return dbc.Form([dbc.FormGroup(
+    return [dbc.Form([dbc.FormGroup(
                 [
-                    dbc.Label("Revenue(M$)", html_for="year0-revenue"),
+                    dbc.Label("Revenue (M$)", html_for="year0-revenue"),
                     dbc.Input(
                         type="number",
                         id="year0-revenue",
@@ -21,7 +22,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("R&D(M$)", html_for="year0-randd"),
+                    dbc.Label("R&D (M$)", html_for="year0-randd"),
                     dbc.Input(
                         type="number",
                         id="year0-randd",
@@ -31,7 +32,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("CapEx(M$)", html_for="year0-capex"),
+                    dbc.Label("CapEx (M$)", html_for="year0-capex"),
                     dbc.Input(
                         type="number",
                         id="year0-capex",
@@ -41,7 +42,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("EBIT excl. Reinvestment(M$)", html_for="year0-ebit"),
+                    dbc.Label("EBIT excl. Reinvestment (M$)", html_for="year0-ebit"),
                     dbc.Input(
                         type="number",
                         id="year0-ebit",
@@ -51,7 +52,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("Past Revenue CAGR(%)", html_for="year0-rgr"),
+                    dbc.Label("Past Revenue CAGR (%)", html_for="year0-rgr"),
                     dbc.Input(
                         type="number",
                         id="year0-rgr",
@@ -61,7 +62,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("Minority Interests(M$)", html_for="minority-interests"),
+                    dbc.Label("Minority Interests (M$)", html_for="minority-interests"),
                     dbc.Input(
                         type="number", value=0,
                         id="minority-interests",
@@ -71,7 +72,7 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("Nonoperating Assets(M$)", html_for="nonoperating-assets"),
+                    dbc.Label("Nonoperating Assets (M$)", html_for="nonoperating-assets"),
                     dbc.Input(
                         type="number", value=0,
                         id="nonoperating-assets",
@@ -81,14 +82,120 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
-                    dbc.Label("Employee Options Value(M$)", html_for="options-value"),
+                    dbc.Label("Employee Options Value (M$)", html_for="options-value"),
                     dbc.Input(
                         type="number", value=0,
                         id="options-value",
                         placeholder="Enter number", debounce=True
                     ),
                 ]
-        ),], inline=True)
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Book Value of Longterm Debt (M$)", html_for="debt-book-value"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="debt-book-value",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Interest Expense (M$)", html_for="interest-expense"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="interest-expense",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Convertible Debt Book Value (M$)", html_for="convertible-debt-book-value"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="convertible-debt-book-value",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Convertible Market Value (M$)", html_for="convertible-market-value"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="convertible-market-value",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Preferred Equity Number of Shares (Millions)", html_for="preferred-num-shares"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="preferred-num-shares",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Preferred Price per share ($)", html_for="preferred-price-pershare"),
+                    dbc.Input(
+                        type="number", value=70,
+                        id="preferred-price-pershare",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Preferred Dividend per share ($)", html_for="preferred-dividend-pershare"),
+                    dbc.Input(
+                        type="number", value=5, min=0.01, step=0.01,
+                        id="preferred-dividend-pershare",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Debt Value of Operating Leases (M$)", html_for="debt-value-op-leases"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="debt-value-op-leases",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        ], inline=True),
+        dbc.Form([dbc.FormGroup(
+                [
+                    dbc.Label("Average Maturity Duration (years)", html_for="average-maturity"),
+                    dcc.Slider(id="average-maturity", min=2, max=10, step=0.25, value=3,
+                    marks={v: str(v) for v in range(2, 11)},
+                    )
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Pretax Cost of Debt (%)", html_for="pretax-cost-debt"),
+                    dcc.Slider(id="pretax-cost-debt", min=2, max=10, step=0.25, value=4,
+                    marks={v: str(v) for v in range(2, 11)},
+                    )
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Convertible Debt Portion of Market Value (%)", html_for="convertible-debt-portion"),
+                    dcc.Slider(id="convertible-debt-portion", min=0, max=100, step=5, value=0,
+                    marks={v: str(v) for v in range(0, 101, 5)},
+                    )
+                ]
+        ),
+        ])]
 
 def get_other_input_overrides():
     return dbc.Form([dbc.FormGroup(
@@ -114,7 +221,28 @@ def get_other_input_overrides():
                     marks={v: str(v) for v in range(0, 101, 5)},
                     )
                 ]
-        ),])
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Override default assumptions:"),
+                    dbc.Checklist(
+                    options=[
+                        {"label": "Terminal Growth Rate equal to Riskfree Rate", "value": 1},
+                    ],
+                    value=[],
+                    id="override-default-assmuptions",
+                    switch=True,
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Terminal Growth Rate Rate (%) (select range: 0 to 5)", html_for="terminal-growth-rate"),
+                    dcc.Slider(id="terminal-growth-rate", min=0, max=5, step=0.25, value=3.5, 
+                    marks={v: str(v) for v in range(0, 6)}, disabled=True),
+                ]
+        )
+    ])
 
 @app.callback([Output('year0-revenue', 'value'),
 Output('year0-randd', 'value'),
@@ -123,7 +251,9 @@ Output('year0-ebit', 'value'),
 Output('year0-rgr', 'value'),
 Output('cagr-2-5', 'value'),
 Output('opm-target', 'value'),
-Output('sales-to-cap', 'value')],
+Output('sales-to-cap', 'value'),
+Output('debt-book-value', 'value'),
+Output('interest-expense', 'value')],
 [Input('fin-df', 'data')])
 def update_current_year_values(df_dict):
     if not df_dict:
@@ -144,7 +274,10 @@ def update_current_year_values(df_dict):
                             get_number_from_string(y['Revenue($)']) for y in df_dict]), 50 )
         sales_to_cap = max(0.05, mean([get_number_from_string(y['Sales-to-Capital(%)']) for y in df_dict]) )
 
-        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap
+        debt_book_value = (get_number_from_string(year0_dict['Longterm Debt($)']) or 0)/1e6
+        interest_expense_debt = (get_number_from_string(year0_dict['Interest Expense($)']) or 0)/1e6
+
+        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate
@@ -153,32 +286,39 @@ def update_current_year_values(df_dict):
 @app.callback([Output('cost-of-cap', 'value')],
 [Input('fin-df', 'data'),
 Input('stats-df', 'data'),
+Input('debt-book-value', 'value'),
+Input('interest-expense', 'value'),
+Input('average-maturity', 'value'),
+Input('pretax-cost-debt', 'value'),
+Input('convertible-debt-book-value', 'value'),
+Input('convertible-market-value', 'value'),
+Input('convertible-debt-portion', 'value'),
+Input('preferred-num-shares', 'value'),
+Input('preferred-price-pershare', 'value'),
+Input('preferred-dividend-pershare', 'value'),
+Input('debt-value-op-leases', 'value'),
 Input('erp-calculated', 'value'),
 Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value')])
-def get_cost_of_capital(df_dict, stats_dict, erp, tax_rate, riskfree_rate):
-    if not df_dict or not stats_dict or not erp:
+def get_cost_of_capital(df_dict, stats_dict, *args):
+    if not df_dict or not stats_dict:
         raise PreventUpdate
     try:
         year0_dict = df_dict[-1]
-        equity_market_value = get_number_from_string(year0_dict['Shares Outstanding']) * stats_dict[0]['lastprice']
-        beta = stats_dict[0]['beta'] if stats_dict[0]['beta'] else 1
-        debt_book_value = get_number_from_string(year0_dict['Longterm Debt($)'])
-        interest_expense_debt = get_number_from_string(year0_dict['Interest Expense($)']) if get_number_from_string(year0_dict['Interest Expense($)']) else 0
-        average_maturity = 3
-        pretax_cost_of_debt = 0.04
-        convertible_debt_book_value = 0
+        equity_market_value = get_number_from_string(year0_dict['Shares Outstanding']) * stats_dict[0]['lastprice'] /1e6
+        beta = stats_dict[0]['beta'] or 1
+        debt_book_value, interest_expense_debt, average_maturity, pretax_cost_of_debt, convertible_debt_book_value, \
+            convertible_market_value, convertible_debt_portion_market_value, preferred_num_shares, preferred_price_pershare, preferred_dividend_pershare, debt_value_op_leases, \
+                erp, tax_rate, riskfree_rate = args
+
+        pretax_cost_of_debt /= 100  # convert to %
+        convertible_debt_portion_market_value /= 100
 
         # =B19*(1-(1+B25)^(-B20))/B25+B18/(1+B25)^B20
         debt_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
-        convertible_market_value = 0
-        convertible_debt_portion_market_value = 0
-        convertible_equity_portion_market_value = convertible_market_value - convertible_debt_portion_market_value
-        preferred_num_shares = 0
-        preferred_price_pershare = 70
-        preferred_dividend_pershare = 5
-
-        debt_value_op_leases = 0
+        convertible_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (convertible_debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
+        convertible_equity_portion_market_value = convertible_market_value * (1 - convertible_debt_portion_market_value)
+        # TODO: Why Convertible Equity not used in CoC?
         total_debt = debt_market_value + convertible_debt_portion_market_value + debt_value_op_leases
 
         cap_structure_list = [equity_market_value, preferred_num_shares * preferred_price_pershare, total_debt]
@@ -192,3 +332,9 @@ def get_cost_of_capital(df_dict, stats_dict, erp, tax_rate, riskfree_rate):
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate
+
+@app.callback([Output('terminal-growth-rate', 'disabled')],
+[Input('override-default-assmuptions', 'value')])
+def override_assumptions(ovr_flag):
+    return [1 not in ovr_flag]
+

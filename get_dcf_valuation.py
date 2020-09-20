@@ -4,12 +4,11 @@ from get_fin_report import get_number_from_string, get_string_from_number
 
 # Assumptions for DCF:
 TERMINAL_YEAR_LENGTH = 10
-TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
 
 def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
-                    tax_rate='15', riskfree_rate='3', cost_of_cap='8.5', 
-                    run_dcf_button_clicks=None, *args):
+                    tax_rate='15', riskfree_rate='3', terminal_growth_rate='3', terminal_growth_eq_riskfree_rate=True, 
+                    cost_of_cap='8.5', run_dcf_button_clicks=None, *args):
     last_price = float(handler_data[0]['status-info'].split(' @')[0].replace(',', ''))
 
     rgr_next = float(rgr_next)/100
@@ -21,9 +20,12 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     cost_of_cap = float(cost_of_cap)/100
     sales_to_cap = float(sales_to_cap)
 
-    if TERMINAL_GROWTH_EQ_RISKFREE_RATE:
+    if terminal_growth_eq_riskfree_rate:
         terminal_growth_rate = riskfree_rate
-        delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
+    else:
+        terminal_growth_rate = float(terminal_growth_rate)/100
+    
+    delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
 
     # From dynamic updates of update_current_year_values
     year0_revenue = args[0]*1e6
@@ -83,7 +85,8 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     dcf_output_dict['last_price'] = last_price
 
     df = pd.DataFrame(dcftable).applymap(get_string_from_number)
-    df['Year'] = range(date.today().year, date.today().year+TERMINAL_YEAR_LENGTH+2)
+    current_year = date.today().year if date.today().month>2 else date.today().year-1
+    df['Year'] = range(current_year, current_year+TERMINAL_YEAR_LENGTH+2)
     # df.set_index('Year', inplace=True)
     column_list = list(df.columns)  # column 'Year' move to be first
     df = df.reindex(columns=[column_list[-1]] + column_list[:-1], copy=False)

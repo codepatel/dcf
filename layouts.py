@@ -5,6 +5,8 @@ import dash_table as dt
 # Local imports
 from dash_utils import make_card, ticker_inputs, make_item, make_social_media_share
 from dynamic_layouts import get_dcf_current_year_input_overrides, get_other_input_overrides
+from assets.about import source_credits, assumptions
+from assets.disclaimer import disclaimer
 
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
 
@@ -89,13 +91,16 @@ dcflayout = html.Div([
         make_card('DCF Inputs - Environmental factors', 'info', dbc.Form([
             dbc.Label("Effective Tax Rate (%) (select range: 0 to 30)", html_for="tax-rate"),
             dcc.Slider(id="tax-rate", min=0, max=30, step=0.1, value=15, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
+            tooltip={'always_visible': True, 'placement': 'topRight'},
+            marks={v: str(v) for v in range(0, 35, 5)}),
             dbc.Label("Riskfree Rate (%) (select range: 0 to 5)", html_for="riskfree-rate"),
             dcc.Slider(id="riskfree-rate", min=0, max=5, step=0.25, value=3.5, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
+            tooltip={'always_visible': True, 'placement': 'topRight'},
+            marks={v: str(v) for v in range(0, 6)}),
             dbc.Label("Cost of Capital (%) (select range: 0 to 15)", html_for="cost-of-cap"),
             dcc.Slider(id="cost-of-cap", min=0, max=15, step=0.25, value=8.5, 
-            tooltip={'always_visible': True, 'placement': 'topRight'}),
+            tooltip={'always_visible': True, 'placement': 'topRight'},
+            marks={v: str(v) for v in range(0, 16)}),
         ])),
         make_card('DCF Outputs', 'success', dbc.Spinner(html.Div(id="dcf-data")))
         ]),
@@ -135,11 +140,12 @@ dcflayout = html.Div([
             dcc.Markdown(children='''
             **Other Assumptions for Intrinsic Value DCF Valuation:**\n
                 1. TERMINAL_YEAR_LENGTH = 10
-                2. TERMINAL_GROWTH_EQ_RISKFREE_RATE = True
-                3. No Preferred stock/dividends in capital structure
-                4. No Convertible debt/equity portion in capital structure
+                2. No Preferred stock/dividends in capital structure (you can override this)
+                3. No Convertible debt/equity portion in capital structure (you can override this)
             '''),
-            dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary', block=True)
+            dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary', block=True),
+            make_card("DCF table (2-stage Terminal value after 10 years) ", "secondary", 
+            dbc.Spinner(html.Div(id="dcf-table")))
         ])),
         dbc.Col([
             make_card("Notes/Commentary", "primary",
@@ -149,27 +155,12 @@ dcflayout = html.Div([
     ],form=True), # row 3
     dbc.Row([
         dbc.Col([
-            make_card("DCF table (2-stage Terminal value after 10 years) ", "secondary", 
-            dbc.Spinner(html.Div(id="dcf-table")))
+            
         ]),
     ]), # row 4
-
     dbc.Row([dbc.Col(
         # MD text area Element for interpretation and analysis of data
-        dcc.Markdown(children='''
-        #### About this App
-        - [Inspired by Professor Aswath Damodaran's teachings and Mission](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/home.htm)
-        - [Prof. Damodaran's Data Sources](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datacurrent.html)
-        - [Prof. Damodaran's Valuation Tools Webcast](https://www.youtube.com/watch?v=F9GfXJ-IrSA)
-        - [Prof. Damodaran's Valuation Spreadsheet Download link](http://www.stern.nyu.edu/~adamodar/pc/fcffsimpleginzuCorona.xlsx)
-        \n
-        *Disclaimer: The Intrinsic Value Calculation here is not as rigorous as the spreadsheet linked above and probably over-simplified in the present version of this app. As it evolves, the App will include more features for completeness over newer releases*\n
-        *Assumptions:*\n
-        1. Only non-financial companies (neither banks nor insurance companies)
-        2. NOLs are not accounted for in DCF valuation (to be improved in future release)
-        3. Cost of Capital is fixed for the timeline of valuation and not linked to the Cost of Capital worksheet and the Country Equity Risk Premium look-up (to be improved in future release and linked to source CSV if available)
-        4. Probability of failure for the firm assumes proceeds in case of bankruptcy are 50 cents on the $ of Present Value.
-        ''')
+        dcc.Markdown(children=source_credits + assumptions + disclaimer)
         )
     ])  # footer row
 ])
@@ -185,7 +176,15 @@ sectorlayout = html.Div([
         )],
         ),
         dbc.Col(make_social_media_share(), align='right', width=400
-        )
+        )        
     ]), # heading row
-    html.Div(id='app-2-display-value', children="Under Construction! Please visit later!")
+    html.Div(id='sector-app-display-value', children="Under Construction! Please visit later!"),
+    html.Br(),
+    html.Br(),
+    html.Br(),
+    dbc.Row([dbc.Col(
+        # MD text area Element for footer
+        dcc.Markdown(children=disclaimer)
+        )
+    ])  # footer row
 ])

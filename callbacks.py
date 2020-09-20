@@ -63,7 +63,7 @@ def refresh_for_update(handler_ticker, handler_past, handler_dcf, status_loading
                 status = d[0]['status-info']   # always 1 element is sent by handler, so use 0
                 status_msg.append(status)
                 supp = d[0]['supp-data']
-                if isinstance(status, str):
+                if isinstance(supp, str):
                     supp_msg.extend(replace_str_element_w_dash_component(supp, repl_dash_component=[]))
                 else:   # it is a dcc or html component, get children
                     supp_msg.extend(replace_str_element_w_dash_component(supp['props']['children']))
@@ -138,7 +138,7 @@ def fin_report(ticker_valid, ticker):
         # 'records' is more "compatible" than 'series'
     except Exception as e:       
         logger.exception(e)
-        return [], [], [], [], {'is_loading': True}, handler_data_message('See Error Message(s) below:', 
+        return [], [], [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', 
                                                                 traceback.format_exc())
 
 @app.callback(Output('plot-indicators', 'figure'),
@@ -179,6 +179,8 @@ Input('opm-target', 'value'),
 Input('sales-to-cap', 'value'),
 Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value'),
+Input('terminal-growth-rate', 'value'),
+Input('terminal-growth-rate', 'disabled'),
 Input('cost-of-cap', 'value'),
 Input('run-dcf', 'n_clicks'),
 Input('year0-revenue', 'value'),
@@ -200,7 +202,10 @@ def dcf_valuation(*args, **kwargs):
         dcf_output_df = pd.DataFrame({
                             'Price': [dcf_output_dict['last_price']],
                             'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
-                            'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])]})
+                            'Price as % of Value': ['{:.2f}'.format(100*dcf_output_dict['last_price']/dcf_output_dict['estimated_value_per_share'])],
+                            'PV Total': [get_string_from_number(dcf_output_dict['PV_sum'])],
+                            'PV Terminal Value': [get_string_from_number(dcf_output_dict['PV_terminal_value'])],
+                            })
         return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True), dash.no_update
     except TypeError as e:
         logger.exception(e)
