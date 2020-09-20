@@ -5,11 +5,11 @@ from get_fin_report import get_number_from_string, get_string_from_number
 # Assumptions for DCF:
 TERMINAL_YEAR_LENGTH = 10
 
-def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10', 
+def get_dcf_df(stats_dict=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
                     tax_rate='15', riskfree_rate='3', terminal_growth_rate='3',  
                     cost_of_cap='8.5', run_dcf_button_clicks=None, *args):
-    last_price = float(handler_data[0]['status-info'].split(' @')[0].replace(',', ''))
+    last_price = stats_dict[0]['lastprice']
 
     rgr_next = float(rgr_next)/100
     opm_next = float(opm_next)/100
@@ -26,14 +26,17 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     year0_capex = args[2]*1e6
     year0_ebit = args[3]*1e6
     year0_rgr = args[4]/100
-    minority_interests = args[5]*1e6
-    nonoperating_assets = args[6]*1e6
-    options_value = args[7]*1e6
+    year0_cash = args[5]*1e6
+    year0_ltdebt = args[6]*1e6
+    year0_shares = args[7]*1e6
+    minority_interests = args[8]*1e6
+    nonoperating_assets = args[9]*1e6
+    options_value = args[10]*1e6
     # From dynamic updates of user input
-    convergence_year = args[8]
-    marginal_tax_rate = args[9]/100
-    probability_of_failure = args[10]/100
-    terminal_growth_eq_riskfree_rate = args[11]
+    convergence_year = args[11]
+    marginal_tax_rate = args[12]/100
+    probability_of_failure = args[13]/100
+    terminal_growth_eq_riskfree_rate = args[14]
 
     if terminal_growth_eq_riskfree_rate:
         terminal_growth_rate = riskfree_rate
@@ -76,12 +79,12 @@ def get_dcf_df(df_dict={}, handler_data=[], rgr_next='5', opm_next='10',
     dcf_output_dict['PV_terminal_value'] = dcf_output_dict['terminal_value'] * dcftable['CDF(%)'][TERMINAL_YEAR_LENGTH]
     dcf_output_dict['PV_sum'] = sum(dcftable['PV_FCF($)'][1:TERMINAL_YEAR_LENGTH+1]) + dcf_output_dict['PV_terminal_value']
     dcf_output_dict['value_operating_assets'] = (1-probability_of_failure) * dcf_output_dict['PV_sum'] + probability_of_failure * (dcf_output_dict['PV_sum']/2)
-    dcf_output_dict['book_value_LTdebt'] = get_number_from_string(df_dict[-1]['Longterm Debt($)']) or 0
-    dcf_output_dict['cash'] = get_number_from_string(df_dict[-1]['Cash($)']) or 0
+    dcf_output_dict['book_value_LTdebt'] = year0_ltdebt
+    dcf_output_dict['cash'] = year0_cash
 
     dcf_output_dict['equity_value'] = dcf_output_dict['value_operating_assets'] - dcf_output_dict['book_value_LTdebt'] - minority_interests + dcf_output_dict['cash'] + nonoperating_assets
     dcf_output_dict['common_equity_value'] = dcf_output_dict['equity_value'] - options_value
-    dcf_output_dict['outstanding_shares'] = get_number_from_string(df_dict[-1]['Shares Outstanding'])
+    dcf_output_dict['outstanding_shares'] = year0_shares
     dcf_output_dict['estimated_value_per_share'] = dcf_output_dict['common_equity_value']/dcf_output_dict['outstanding_shares']
     dcf_output_dict['last_price'] = last_price
 

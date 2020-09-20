@@ -62,6 +62,26 @@ def get_dcf_current_year_input_overrides():
         ),
         dbc.FormGroup(
                 [
+                    dbc.Label("Cash and Equivalents (M$)", html_for="cash"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="cash",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Common Shares Outstanding (Millions)", html_for="shares-outstanding"),
+                    dbc.Input(
+                        type="number", value=0,
+                        id="shares-outstanding",
+                        placeholder="Enter number", debounce=True
+                    ),
+                ]
+        ),
+        dbc.FormGroup(
+                [
                     dbc.Label("Minority Interests (M$)", html_for="minority-interests"),
                     dbc.Input(
                         type="number", value=0,
@@ -246,7 +266,9 @@ Output('cagr-2-5', 'value'),
 Output('opm-target', 'value'),
 Output('sales-to-cap', 'value'),
 Output('debt-book-value', 'value'),
-Output('interest-expense', 'value')],
+Output('interest-expense', 'value'),
+Output('cash', 'value'),
+Output('shares-outstanding', 'value')],
 [Input('fin-df', 'data')])
 def update_current_year_values(df_dict):
     if not df_dict:
@@ -269,8 +291,10 @@ def update_current_year_values(df_dict):
 
         debt_book_value = (get_number_from_string(year0_dict['Longterm Debt($)']) or 0)/1e6
         interest_expense_debt = (get_number_from_string(year0_dict['Interest Expense($)']) or 0)/1e6
+        cash = (get_number_from_string(year0_dict['Cash($)']) or 0)/1e6
+        shares_outstanding = get_number_from_string(year0_dict['Shares Outstanding'])/1e6
 
-        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt
+        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt, cash, shares_outstanding
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate

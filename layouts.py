@@ -97,7 +97,7 @@ dcflayout = html.Div([
             dcc.Slider(id="riskfree-rate", min=0, max=5, step=0.25, value=1.25, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 6)}),
-            dbc.Label("Terminal Growth Rate Rate (%) (select range: 0 to 5)", html_for="terminal-growth-rate"),
+            dbc.Label("Terminal Growth Rate (%) (select range: 0 to 5)", html_for="terminal-growth-rate"),
             dcc.Slider(id="terminal-growth-rate", min=0, max=5, step=0.25, value=3.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 6)}, disabled=False),
