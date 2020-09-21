@@ -34,7 +34,7 @@ dcflayout = html.Div([
         [dcc.Markdown(children='''
             ### Purpose of this web app ###
             ##### To be one of the tools to educate and democratize fundamentals DCF (Discounted Cash Flow) Valuation Analysis of public equity investments #####
-            See footer below for more on [About this DCF Valuation App](#about-this-app), Disclaimer and Assumptions
+            See footer below for more on [About this DCF Valuation App](https://github.com/codepatel/dcf#readme), Assumptions and Disclaimer.
             '''
         )],
         ),
