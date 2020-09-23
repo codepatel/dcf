@@ -40,6 +40,14 @@ def handler_data_message(title, exception_obj):
         style={'color': 'red'})
         }]
 
+@app.callback([Output('ticker-input', 'value')],
+[Input('nav-dcf', 'active')],
+[State('url', 'pathname')])
+def parse_ticker(dcf_app_active, pathname):
+    if dcf_app_active:
+        parse_ticker = pathname.split('/apps/dcf')[-1].split('/')
+        return [parse_ticker[1].upper() or 'AAPL']
+
 @app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 
 [Input('handler-ticker-valid', 'data'),
@@ -82,7 +90,7 @@ def check_ticker_validity(ticker):
         if ticker_allcaps in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
             is_valid_ticker = True
             return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_allcaps, [{'status-info': ticker_dict()[ticker_allcaps] + ' :\nLast Price ', 
-                                                            'supp-data': ''}]
+                                                                                                                'supp-data': ''}]
         else:
             raise ValueError("Invalid Ticker entered: " + ticker + '\nValid Tickers from listed Exchanges:\n' + '\n'.join(exchange_list()))
     except Exception as InvalidTicker:
@@ -103,17 +111,17 @@ Output('select-column', 'options'),
 Output('status-info', 'loading_state'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
-[State('ticker-allcaps', 'children')])
+[State('ticker-input', 'value')])
 def fin_report(ticker_valid, ticker): 
     if not ticker_valid:
         return [], [], [], [], {'is_loading': True}, dash.no_update
     try:
-        ticker_allcaps = ticker.split(': ')[-1]
+        ticker_allcaps = ticker.upper()
         df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
         next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
 
         table = dbc.Table.from_dataframe(df[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
-                'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Capital Expenditures($)']], 
+                'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Net Investing Cash Flow($)']], 
                 striped=True, bordered=True, hover=True)
         
         stats_record = {'ticker': ticker_allcaps,

@@ -11,18 +11,23 @@ import callbacks
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id="page-content")
+    html.Div(id="page-content", children=navheader)
 ])
 
-@app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
+@app.callback([Output('page-content', 'children'),
+Output('nav-main', 'active'),
+Output('nav-dcf', 'active'),
+Output('nav-sector', 'active'),],
+[Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/apps/dcf':
-         return dcflayout
+    if pathname == '/': # Root "Main" page
+        return navheader, True, False, False
+    if '/apps/dcf' in pathname:
+        return dcflayout, False, True, False
     elif pathname == '/apps/sector':
-         return sectorlayout
+        return sectorlayout, False, False, True
     else:
-        return navheader
+        return html.H1("404!"), False, False, False
 
 # @app.callback(Output("tab-content", "children"), [Input("tabs", "active_tab")])
 # def switch_tab(at):

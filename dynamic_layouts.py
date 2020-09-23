@@ -281,7 +281,7 @@ def update_current_year_values(df_dict):
         year0_revenue = get_number_from_string(year0_dict['Revenue($)'])/1e6
         year0_randd = get_number_from_string(year0_dict['Research & Development($)'])/1e6
         year0_ebit = get_number_from_string(year0_dict['Pretax Income($)'])/1e6 + year0_randd
-        year0_capex = -round(get_number_from_string(year0_dict['Capital Expenditures($)']))/1e6
+        year0_capex = -round(get_number_from_string(year0_dict['Net Investing Cash Flow($)']))/1e6
         year0_rgr = round(100 * ((get_number_from_string(df_dict[-2]['Revenue($)'])/get_number_from_string(df_dict[0]['Revenue($)'])) ** (1/(len(df_dict)-2)) - 1), 2)
 
         cagr_2_5 = min(year0_rgr, 15)    # starting point same as past performance
