@@ -70,7 +70,7 @@ def get_financial_report(ticker):
     if cfdata_lines['capex'][1][0] != '-':
         capEx_ttm = get_element(cfdata_lines['capex'],1)
     else:
-        capEx_ttm = get_element(cfdata_lines['capex'],3) if get_element(cfdata_lines['capex'],3) != '-' else get_element(cfdata_lines['capex'],2)
+        capEx_ttm = get_element(cfdata_lines['capex'],3) if '-' not in get_element(cfdata_lines['capex'],3) else get_element(cfdata_lines['capex'],2)
     capEx = get_element(cfdata_lines['capex'],0) + capEx_ttm
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     

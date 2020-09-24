@@ -19,7 +19,7 @@ navheader = dbc.Row([dbc.Col(
                         ], pills=True),
                         ),
                     dbc.Col(id='social-share', align='right', width=400),
-                    dbc.Col([html.P('VERSION:'), html.P(VERSION)], align='right', width=60)
+                    dbc.Col([html.Small('VERSION:'), html.P(VERSION)], align='right', width=60)
             ])
 
 
@@ -73,13 +73,16 @@ dcflayout = html.Div([
                         html.Br(),
                         dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
                         dcc.Slider(id="cagr-2-5", min=0, max=15, step=0.1, value=5, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 16)}),
                         dbc.Label("Target Pre-Tax Operating Margin (%) in business model (select range: 0 to 50)", html_for="opm-target"),
                         dcc.Slider(id="opm-target", min=0, max=50, step=0.1, value=20, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
-                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 4)", html_for="sales-to-cap"),
-                        dcc.Slider(id="sales-to-cap", min=0, max=4, step=0.05, value=1, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 55, 5)}),
+                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 5)", html_for="sales-to-cap"),
+                        dcc.Slider(id="sales-to-cap", min=0, max=5, step=0.01, value=1, 
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 6)}),
                     ]), label="GPE Levers", tab_id="tab-lever", label_style={"color": "#00AEF9"}
                 ),
                 dbc.Tab(
