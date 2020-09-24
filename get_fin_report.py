@@ -48,14 +48,17 @@ def get_financial_report(ticker):
     epsGrowth = get_element(isdata_lines['eps'],1) + get_element(isdata_lines['eps'],3)
     preTaxIncome = get_element(isdata_lines['pretaxincome'],0) + get_element(isdata_lines['pretaxincome'],2)
     netIncome = get_element(isdata_lines['netincome'],1) + get_element(isdata_lines['netincome'],6)
-    interestExpense = get_element(isdata_lines['interestexpense'],0) + get_element(isdata_lines['interestexpense'],3)
+    interestExpense = get_element(isdata_lines['interestexpense'],0) + (get_element(isdata_lines['interestexpense'],3) if len(isdata_lines['interestexpense'][3]) ==1 else get_element(isdata_lines['interestexpense'],4))
     resanddev = get_element(isdata_lines['randd'],0) + get_element(isdata_lines['randd'],1)
     ebitda = get_element(isdata_lines['ebitda'],0) + get_element(isdata_lines['ebitda'],3)
     outstanding_shares = get_element(isdata_lines['shares'],0) + get_element(isdata_lines['shares'],1)
 
     shareholderEquity = get_element(bsdata_lines['equity'],0) + get_element(bsdata_lines['equity'],2)
     longtermDebt = get_element(bsdata_lines['ltd'],0) + get_element(bsdata_lines['ltd'],1)
-    totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],6)
+    if bsdata_lines['totalassets'][1][0] != '-':
+        totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],6)
+    else:
+        totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],5)
     if get_number_from_string(totalAssets[0]) < 10:
         totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],4)
     intangibleAssets = get_element(bsdata_lines['intangibleassets'],0) + get_element(bsdata_lines['intangibleassets'],1)
@@ -64,9 +67,11 @@ def get_financial_report(ticker):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
 
-    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],5)
-    if all([c == '-' for c in capEx]):
-        capEx = get_element(cfdata_lines['capex'],3) + get_element(cfdata_lines['capex'],7)
+    if cfdata_lines['capex'][1][0] != '-':
+        capEx_ttm = get_element(cfdata_lines['capex'],1)
+    else:
+        capEx_ttm = get_element(cfdata_lines['capex'],3) if '-' not in get_element(cfdata_lines['capex'],3) else get_element(cfdata_lines['capex'],2)
+    capEx = get_element(cfdata_lines['capex'],0) + capEx_ttm
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
@@ -76,7 +81,7 @@ def get_financial_report(ticker):
             'Longterm Debt($)': longtermDebt, 'Shareholder Equity($)': shareholderEquity,
             'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets, 
             'Total Current Liabilities($)': currentLiabilities, 'Cash($)': cash,
-            'Capital Expenditures($)': capEx, 'Free Cash Flow($)': fcf
+            'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(date.today().year-5,date.today().year+1))
     df.reset_index(inplace=True)
     df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)
@@ -108,7 +113,7 @@ def walk_row(titlerow):
 
 def get_income_data(data_titles, data_lines):
     def build_income_list(data_list):
-        if 'Revenue' in title.text or 'Sales' in title.text \
+        if 'Sales' in title.text \
                 or 'Net Interest Income after Provision' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
         if 'EPS (Basic)' in title.text:
@@ -117,7 +122,7 @@ def get_income_data(data_titles, data_lines):
             data_lines['pretaxincome'].append(data_list)
         if 'Net Income' in title.text:
             data_lines['netincome'].append(data_list)
-        if 'Total Interest Expense' in title.text:
+        if ' Interest Expense' in title.text:
             data_lines['interestexpense'].append(data_list)
         if 'Research & Development' in title.text:
             data_lines['randd'].append(data_list)
@@ -165,7 +170,7 @@ def get_balancesheet_data(data_titles, data_lines):
     
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
-        if 'Capital Expenditures' in title.text or 'Increase in Loans' in title.text:
+        if 'Net Investing Cash Flow' in title.text:
             data_lines['capex'].append(data_list)
         if 'Free Cash Flow' in title.text:
             data_lines['fcf'].append(data_list)

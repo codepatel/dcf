@@ -3,6 +3,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_table as dt
 # Local imports
+from __init__ import VERSION
 from dash_utils import make_card, ticker_inputs, make_item, make_social_media_share
 from dynamic_layouts import get_dcf_current_year_input_overrides, get_other_input_overrides
 from assets.about import source_credits, assumptions
@@ -10,10 +11,18 @@ from assets.disclaimer import disclaimer
 
 # Reference and some Dashboard components inspired by: https://medium.com/swlh/how-to-create-a-dashboard-to-dominate-the-stock-market-using-python-and-dash-c35a12108c93
 
-navheader = dbc.Nav([
-                dbc.NavLink("DCF Valuation Analysis", href="/apps/dcf"),
-                dbc.NavLink("Sector Value Analysis", href="/apps/sector"),
-            ], pills=True)
+navheader = dbc.Row([dbc.Col(
+                        dbc.Nav([
+                        dbc.NavLink("Main", href="/", id='nav-main'),
+                        dbc.NavLink("DCF Valuation Analysis", href="/apps/dcf/AAPL", id='nav-dcf'),
+                        dbc.NavLink("Sector Value Analysis", href="/apps/sector", id='nav-sector'),
+                        ], pills=True),
+                        ),
+                    dbc.Col(id='social-share', align='right', width=400),
+                    dbc.Col([html.Small('VERSION:'), html.P(VERSION)], align='right', width=60)
+            ])
+
+
 
 tabheader = html.Div([
         dbc.Tabs([
@@ -38,12 +47,10 @@ dcflayout = html.Div([
             '''
         )],
         ),
-        dbc.Col(make_social_media_share(), align='right', width=400
-        )
     ]), # heading row
     dbc.Row([
         dbc.Col([
-        make_card("Enter Ticker", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)
+        make_card("Ticker for Analysis", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)
         # dbc.Select(
         #     id='ticker-input', 
         #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
@@ -66,13 +73,16 @@ dcflayout = html.Div([
                         html.Br(),
                         dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
                         dcc.Slider(id="cagr-2-5", min=0, max=15, step=0.1, value=5, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 16)}),
                         dbc.Label("Target Pre-Tax Operating Margin (%) in business model (select range: 0 to 50)", html_for="opm-target"),
                         dcc.Slider(id="opm-target", min=0, max=50, step=0.1, value=20, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
-                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 4)", html_for="sales-to-cap"),
-                        dcc.Slider(id="sales-to-cap", min=0, max=4, step=0.05, value=1, 
-                        tooltip={'always_visible': True, 'placement': 'topRight'}),
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 55, 5)}),
+                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 5)", html_for="sales-to-cap"),
+                        dcc.Slider(id="sales-to-cap", min=0, max=5, step=0.01, value=1, 
+                        tooltip={'always_visible': True, 'placement': 'topRight'},
+                        marks={v: str(v) for v in range(0, 6)}),
                     ]), label="GPE Levers", tab_id="tab-lever", label_style={"color": "#00AEF9"}
                 ),
                 dbc.Tab(
@@ -178,9 +188,7 @@ sectorlayout = html.Div([
             ### Find the best picks in the sector! ###
             '''
         )],
-        ),
-        dbc.Col(make_social_media_share(), align='right', width=400
-        )        
+        ),  
     ]), # heading row
     html.Div(id='sector-app-display-value', children="Under Construction! Please visit later!"),
     html.Br(),

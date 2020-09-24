@@ -3,8 +3,10 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_table
+from dash.dependencies import Input, Output, State
 import dateutil.relativedelta
 from datetime import date
+from app import app
 
 SELF_URL = 'https://dcf-valuation-damodaran.herokuapp.com'
 
@@ -64,16 +66,16 @@ def ticker_inputs(inputID, pickerID, MONTH_CUTTOFF):
     pastDate = currentDate - dateutil.relativedelta.relativedelta(months=MONTH_CUTTOFF)
     
     return html.Div([
-        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", value="AAPL", debounce=True), 
+        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", debounce=True, disabled=True), 
         html.P(" "), 
-        dcc.DatePickerRange(
-        id = pickerID,
-        min_date_allowed=pastDate,
-        max_date_allowed=currentDate,
-        #initial_visible_month=dt(2017, 8, 5),
-        start_date = pastDate,
-        end_date = currentDate
-        )
+        # dcc.DatePickerRange(
+        # id = pickerID,
+        # min_date_allowed=pastDate,
+        # max_date_allowed=currentDate,
+        # #initial_visible_month=dt(2017, 8, 5),
+        # start_date = pastDate,
+        # end_date = currentDate
+        # )
     ])
 
 def make_item(button, cardbody, i):
@@ -93,11 +95,13 @@ def make_item(button, cardbody, i):
         )
     ])
 
-def make_social_media_share():
+@app.callback([Output('social-share', 'children')],
+[Input('url', 'pathname')])
+def make_social_media_share(url_extension):
     # got these buttons from simplesharebuttons.com, Yolandi Vi$$er
-    return dbc.CardGroup([
+    return [dbc.CardGroup([
         dbc.Card([ # Facebook
-            html.A(href=f'http://www.facebook.com/sharer.php?u={SELF_URL}', target='_blank',
+            html.A(href=f'http://www.facebook.com/sharer.php?u={SELF_URL}{url_extension}', target='_blank',
             children=dbc.CardImg(
             src='/assets/images/MiniFB.png',
             alt='Share with Facebook',
@@ -106,7 +110,7 @@ def make_social_media_share():
             )),
         ]),
         dbc.Card([ # LinkedIn
-            html.A(href=f'http://www.linkedin.com/shareArticle?mini=true&url={SELF_URL}', target='_blank',
+            html.A(href=f'http://www.linkedin.com/shareArticle?mini=true&url={SELF_URL}{url_extension}', target='_blank',
             children=dbc.CardImg(
             src='/assets/images/MiniLinkedIn.png',
             alt='Share with LinkedIn',
@@ -115,7 +119,7 @@ def make_social_media_share():
             )),   
         ]),
         dbc.Card([ # Twitter
-            html.A(href=f'http://twitter.com/share?url={SELF_URL}/&text=Stock_Analysis&hashtags=StockAnalysis', target='_blank',
+            html.A(href=f'http://twitter.com/share?url={SELF_URL}{url_extension}&text=Stock_Analysis&hashtags=StockAnalysis', target='_blank',
             children=dbc.CardImg(
             src='/assets/images/MiniTwitter.png',
             alt='Tweet this!',
@@ -124,7 +128,7 @@ def make_social_media_share():
             )),
         ]), # , style={"width": "5rem"}
         dbc.Card([ # Pinterest
-            html.A(href=f'https://pinterest.com/pin/create/button/?url={SELF_URL}/&media=StockAnalysis&description=StockAnalysis', target='_blank',
+            html.A(href=f'https://pinterest.com/pin/create/button/?url={SELF_URL}{url_extension}&media=StockAnalysis&description=StockAnalysis', target='_blank',
             children=dbc.CardImg(
             src='/assets/images/MiniPinterest.png',
             alt='Pin It!',
@@ -133,7 +137,7 @@ def make_social_media_share():
             )),            
         ]),
         dbc.Card([ # Email
-            html.A(href=f'mailto:?Subject=Stock Analysis Web App&Body=I saw this and wanted to share it with you: {SELF_URL}/', target='_blank',
+            html.A(href=f'mailto:?Subject=Stock Analysis Web App&Body=I saw this and wanted to share it with you: {SELF_URL}{url_extension}', target='_blank',
             children=dbc.CardImg(
             src='/assets/images/MiniEmail.png',
             alt='Email link!',
@@ -142,7 +146,7 @@ def make_social_media_share():
             )),            
         ]),
         #dbc.Card([])    # empty card at end as spacer
-    ])
+    ])]
 
 def replace_str_element_w_dash_component(str_with_newlines, sep_str='\n', repl_dash_component=html.Br()):
     str_list = str_with_newlines.split(sep_str)
