@@ -66,7 +66,7 @@ def ticker_inputs(inputID, pickerID, MONTH_CUTTOFF):
     pastDate = currentDate - dateutil.relativedelta.relativedelta(months=MONTH_CUTTOFF)
     
     return html.Div([
-        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", debounce=True, disabled=True), 
+        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", value='AAPL', debounce=True, disabled=True), 
         html.P(" "), 
         # dcc.DatePickerRange(
         # id = pickerID,
