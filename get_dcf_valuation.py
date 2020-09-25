@@ -49,6 +49,7 @@ def get_dcf_df(stats_dict=[], rgr_next='5', opm_next='10',
     year0_ebitlesstax = (year0_ebit - year0_randd) * (1-tax_rate) + year0_randd
     year0_reinvestment = (year0_revenue * year0_rgr / sales_to_cap) + year0_randd
     year0_fcf = year0_ebitlesstax - year0_reinvestment
+    year0_randd_to_revenue = year0_randd/year0_revenue
 
     dcftable = {
         'Revenue($)': [year0_revenue],
@@ -68,7 +69,8 @@ def get_dcf_df(stats_dict=[], rgr_next='5', opm_next='10',
         dcftable['Revenue($)'].append(dcftable['Revenue($)'][period-1] * (1+dcftable['Revenue Growth(%)'][period]))
         dcftable['EBIT+R&D($)'].append(dcftable['Revenue($)'][period] * dcftable['Operating Margin(%)'][period])
         dcftable['EBIT(1-T)($)'].append(dcftable['EBIT+R&D($)'][period] * (1 - dcftable['Tax Rate(%)'][period]))
-        dcftable['Reinvestment($)'].append((dcftable['Revenue($)'][period]-dcftable['Revenue($)'][period-1])/sales_to_cap if dcftable['Revenue($)'][period] > dcftable['Revenue($)'][period-1] else 0)
+        capitalized_randd = year0_randd_to_revenue * dcftable['Revenue($)'][period] * (1-0.02*period)
+        dcftable['Reinvestment($)'].append((dcftable['Revenue($)'][period]-dcftable['Revenue($)'][period-1])/sales_to_cap + (capitalized_randd) if dcftable['Revenue Growth(%)'][period]>0 else capitalized_randd)
         dcftable['FCF($)'].append(dcftable['EBIT(1-T)($)'][period] - dcftable['Reinvestment($)'][period])
         dcftable['CDF(%)'].append(dcftable['CDF(%)'][period-1] / (1+cost_of_cap))
         dcftable['PV_FCF($)'].append(dcftable['FCF($)'][period] * dcftable['CDF(%)'][period])
