@@ -47,7 +47,7 @@ def get_dcf_df(stats_dict=[], rgr_next='5', opm_next='10',
 
     year0_margin = year0_ebit/year0_revenue
     year0_ebitlesstax = (year0_ebit - year0_randd) * (1-tax_rate) + year0_randd
-    year0_reinvestment = year0_capex + year0_randd
+    year0_reinvestment = (year0_revenue * year0_rgr / sales_to_cap) + year0_randd
     year0_fcf = year0_ebitlesstax - year0_reinvestment
 
     dcftable = {
