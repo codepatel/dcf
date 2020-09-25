@@ -14,4 +14,4 @@ logger = logging.getLogger()
 
 HERE = Path(__file__).parent
 TIMEOUT_12HR = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
-VERSION = 'v0.2-alpha.0'
+VERSION = 'v0.2-alpha.1'

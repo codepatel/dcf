@@ -46,7 +46,10 @@ def handler_data_message(title, exception_obj):
 def parse_ticker(dcf_app_active, pathname):
     if dcf_app_active:
         parse_ticker = pathname.split('/apps/dcf')[-1].split('/')
-        return [parse_ticker[1].upper() or 'AAPL']
+        if len(parse_ticker) == 1:
+            return ['AAPL']
+        else:
+            return [parse_ticker[1].upper() or 'AAPL']
 
 @app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 

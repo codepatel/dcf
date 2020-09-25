@@ -3,7 +3,7 @@ from app import app
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 # Local imports
 from __init__ import logger
@@ -316,7 +316,9 @@ Input('preferred-dividend-pershare', 'value'),
 Input('debt-value-op-leases', 'value'),
 Input('erp-calculated', 'value'),
 Input('tax-rate', 'value'),
-Input('riskfree-rate', 'value')])
+Input('riskfree-rate', 'value')],
+[State('terminal-growth-rate', 'disabled'),
+State('terminal-growth-rate', 'value')])
 def get_cost_of_capital(df_dict, stats_dict, *args):
     if not df_dict or not stats_dict:
         raise PreventUpdate
@@ -326,7 +328,7 @@ def get_cost_of_capital(df_dict, stats_dict, *args):
         beta = stats_dict[0]['beta'] or 1
         debt_book_value, interest_expense_debt, average_maturity, pretax_cost_of_debt, convertible_debt_book_value, \
             convertible_market_value, convertible_debt_portion_market_value, preferred_num_shares, preferred_price_pershare, preferred_dividend_pershare, debt_value_op_leases, \
-                erp, tax_rate, riskfree_rate = args
+                erp, tax_rate, riskfree_rate, terminal_growth_eq_riskfree_rate, terminal_growth_rate = args
 
         pretax_cost_of_debt /= 100  # convert to %
         convertible_debt_portion_market_value /= 100
@@ -342,10 +344,12 @@ def get_cost_of_capital(df_dict, stats_dict, *args):
         total_capital = sum(cap_structure_list)
         wcc = [c/total_capital for c in cap_structure_list]
         coc = [riskfree_rate + (beta * erp), 
-                preferred_dividend_pershare/preferred_price_pershare, 
-                pretax_cost_of_debt * (1-tax_rate)]
+                100*preferred_dividend_pershare/preferred_price_pershare, 
+                100*pretax_cost_of_debt * (1-tax_rate/100)]
+        # Use 5 basis points over the Terminal Growth rate as Minimum CoC
+        min_coc = 0.05 + (riskfree_rate if terminal_growth_eq_riskfree_rate else terminal_growth_rate)
 
-        return [sum([wcc[c]*rate for c, rate in enumerate(coc)])]
+        return [max(sum([wcc[c]*rate for c, rate in enumerate(coc)]), min_coc)]
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate

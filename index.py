@@ -20,7 +20,7 @@ Output('nav-dcf', 'active'),
 Output('nav-sector', 'active'),],
 [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/': # Root "Main" page
+    if not pathname or pathname == '/': # Root "Main" page
         return navheader, True, False, False
     if '/apps/dcf' in pathname:
         return dcflayout, False, True, False
