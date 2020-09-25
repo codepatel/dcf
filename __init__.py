@@ -12,6 +12,7 @@ logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
                 level=logging.INFO)
 logger = logging.getLogger()
 
+VERSION = 'v0.3-alpha.0'
 HERE = Path(__file__).parent
 TIMEOUT_12HR = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
-VERSION = 'v0.2-alpha.1'
+DEFAULT_TICKER = 'AAPL'

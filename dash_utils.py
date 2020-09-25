@@ -7,6 +7,7 @@ from dash.dependencies import Input, Output, State
 import dateutil.relativedelta
 from datetime import date
 from app import app
+from __init__ import DEFAULT_TICKER
 
 SELF_URL = 'https://dcf-valuation-damodaran.herokuapp.com'
 
@@ -66,7 +67,7 @@ def ticker_inputs(inputID, pickerID, MONTH_CUTTOFF):
     pastDate = currentDate - dateutil.relativedelta.relativedelta(months=MONTH_CUTTOFF)
     
     return html.Div([
-        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", value='AAPL', debounce=True, disabled=True), 
+        dbc.Input(id = inputID, type="text", placeholder="Enter Ticker, press Enter", value=DEFAULT_TICKER, debounce=True, disabled=True), 
         html.P(" "), 
         # dcc.DatePickerRange(
         # id = pickerID,

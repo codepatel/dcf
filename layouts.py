@@ -50,13 +50,31 @@ dcflayout = html.Div([
     ]), # heading row
     dbc.Row([
         dbc.Col([
-        make_card("Ticker for Analysis", "info", ticker_inputs('ticker-input', 'date-picker', 12*5)
+        make_card("Ticker for Analysis", "info", [ticker_inputs('ticker-input', 'date-picker', 12*5),
         # dbc.Select(
         #     id='ticker-input', 
         #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
         #     value='AAPL',
-        #     placeholder='Start typing Ticker, press Enter')
-        ), html.Div(id='ticker-allcaps'),
+        #     placeholder='Start typing Ticker, press Enter'),
+        dbc.FormGroup(
+                [
+                    dbc.Label("Analysis mode selection: (if inactive, use Snapshot mode)"),
+                    dbc.Checklist(
+                    options=[
+                        {"label": "Live?", "value": 1},
+                    ],
+                    value=[1],
+                    id="analysis-mode",
+                    switch=True,
+                    ),
+                ]
+        ),
+        ]), 
+        html.Div(id='ticker-allcaps'), 
+        html.Data(id='snapshot-uuid', value='95df36ac-bc52-52e1-bdf6-bac53b7aa4ca'), 
+        html.Div([dbc.Button('Save Snapshot', id='save-snapshot', color='primary'),
+            html.Span(dbc.NavLink('Snapshot link', id='snapshot-link', href='/apps/dcf/AAPL', disabled=True), style={"vertical-align": "middle"}),
+        ]),
         make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}))),
         make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info', loading_state={'is_loading': True})))
         ]),
@@ -126,6 +144,7 @@ dcflayout = html.Div([
             dbc.Spinner(html.Div(id="fin-table"))),  
             dt.DataTable(id="fin-df"),
             dt.DataTable(id="stats-df"),
+            dt.DataTable(id="handler-parseURL"),
             dt.DataTable(id="handler-ticker-valid"),
             dt.DataTable(id="handler-past-data"), 
             dt.DataTable(id="handler-dcf-data"),

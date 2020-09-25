@@ -2,6 +2,7 @@ from pathlib import Path
 from time import sleep
 import json
 import traceback
+import uuid
 import pandas as pd
 import dash
 from dash.dependencies import Input, Output, State
@@ -12,7 +13,7 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 # from iexfinance.stocks import Stock
 # Local imports
-from __init__ import logger, HERE, TIMEOUT_12HR
+from __init__ import logger, HERE, TIMEOUT_12HR, DEFAULT_TICKER
 from app import app, cache
 from dash_utils import make_table, replace_str_element_w_dash_component
 from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
@@ -40,24 +41,56 @@ def handler_data_message(title, exception_obj):
         style={'color': 'red'})
         }]
 
-@app.callback([Output('ticker-input', 'value')],
+@app.callback([Output('ticker-input', 'value'),
+Output('analysis-mode', 'value'),
+Output('snapshot-uuid', 'value'),
+Output('handler-parseURL', 'data')],
 [Input('nav-dcf', 'active')],
 [State('url', 'pathname')])
 def parse_ticker(dcf_app_active, pathname):
     if dcf_app_active:
         parse_ticker = pathname.split('/apps/dcf')[-1].split('/')
         if len(parse_ticker) == 1:
-            return ['AAPL']
-        else:
-            return [parse_ticker[1].upper() or 'AAPL']
+            return DEFAULT_TICKER, [1], str(uuid.uuid5(uuid.uuid4(), DEFAULT_TICKER)), dash.no_update
+        elif len(parse_ticker) == 2:
+            ticker_value = parse_ticker[1].upper() or DEFAULT_TICKER
+            return ticker_value, [1], str(uuid.uuid5(uuid.uuid4(), ticker_value)), dash.no_update
+        else:   # >=3
+            if parse_ticker[2]:
+                try:
+                    uuid_val = uuid.UUID(parse_ticker[2], version=5)
+                    if uuid_val.hex == parse_ticker[2].replace('-',''):
+                        return parse_ticker[1].upper() or DEFAULT_TICKER, [], parse_ticker[2], dash.no_update
+                    else:
+                        raise ValueError("Bad Snapshot ID from URL: " + parse_ticker[2])
+                except:
+                    return parse_ticker[1].upper() or DEFAULT_TICKER, [], '', handler_data_message('See Error Message(s) below:', traceback.format_exc())
+                
+            else:
+                return parse_ticker[1].upper(), [], str(uuid.uuid5(uuid.uuid4(), parse_ticker[1].upper())), dash.no_update
+
+@app.callback([Output('snapshot-link', 'href'),
+Output('snapshot-link', 'disabled')],
+[Input('analysis-mode', 'value'),
+Input('save-snapshot', 'n_clicks'),
+Input('ticker-input', 'value'),
+Input('snapshot-uuid', 'value')])
+def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid):
+    if 1 in live_analysis_mode: # generate a fresh UUID
+        snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
+    if save_button_clicked:
+        return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False
+    else:
+        raise PreventUpdate
 
 @app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 
-[Input('handler-ticker-valid', 'data'),
+[Input('handler-parseURL', 'data'),
+Input('handler-ticker-valid', 'data'),
 Input('handler-past-data', 'data'),
 Input('handler-dcf-data', 'data'),
 Input('status-info', 'loading_state')])
-def refresh_for_update(handler_ticker, handler_past, handler_dcf, status_loading_dict):
+def refresh_for_update(handler_parseURL, handler_ticker, handler_past, handler_dcf, status_loading_dict):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
