@@ -46,8 +46,8 @@ def handler_data_message(title, exception_obj):
 Output('analysis-mode', 'value'),
 Output('snapshot-uuid', 'value'),
 Output('handler-parseURL', 'data')],
-[Input('nav-dcf', 'active')],
-[Input('url', 'pathname')])
+[Input('nav-dcf', 'active'),
+Input('url', 'pathname')])
 def parse_ticker(dcf_app_active, pathname):
     if dcf_app_active:
         parse_ticker = pathname.split('/apps/dcf')[-1].split('/')
