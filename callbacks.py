@@ -5,7 +5,8 @@ import traceback
 import uuid
 import pandas as pd
 import dash
-from dash.dependencies import Input, Output, State
+# from dash.dependencies import Input, Output, State
+from dash_extensions.enrich import Output, Input, Trigger, ServersideOutput, State
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
@@ -46,7 +47,7 @@ Output('analysis-mode', 'value'),
 Output('snapshot-uuid', 'value'),
 Output('handler-parseURL', 'data')],
 [Input('nav-dcf', 'active')],
-[State('url', 'pathname')])
+[Input('url', 'pathname')])
 def parse_ticker(dcf_app_active, pathname):
     if dcf_app_active:
         parse_ticker = pathname.split('/apps/dcf')[-1].split('/')
@@ -65,11 +66,14 @@ def parse_ticker(dcf_app_active, pathname):
                         raise ValueError("Bad Snapshot ID from URL: " + parse_ticker[2])
                 except:
                     return parse_ticker[1].upper() or DEFAULT_TICKER, [], '', handler_data_message('See Error Message(s) below:', traceback.format_exc())
-                
+
             else:
                 return parse_ticker[1].upper(), [], str(uuid.uuid5(uuid.uuid4(), parse_ticker[1].upper())), dash.no_update
+    else:
+        raise PreventUpdate
 
 @app.callback([Output('snapshot-link', 'href'),
+Output('save-snapshot', 'disabled'),
 Output('snapshot-link', 'disabled')],
 [Input('analysis-mode', 'value'),
 Input('save-snapshot', 'n_clicks'),
@@ -78,10 +82,9 @@ Input('snapshot-uuid', 'value')])
 def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid):
     if 1 in live_analysis_mode: # generate a fresh UUID
         snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
-    if save_button_clicked:
-        return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False
+        return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
-        raise PreventUpdate
+        return dash.no_update, True, True
 
 @app.callback([Output('status-info', 'children'),
 Output('supp-info', 'children')], 
@@ -125,7 +128,7 @@ def check_ticker_validity(ticker):
         ticker_allcaps = ticker.upper()
         if ticker_allcaps in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
             is_valid_ticker = True
-            return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_allcaps, [{'status-info': ticker_dict()[ticker_allcaps] + ' :\nLast Price ', 
+            return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_dict()[ticker_allcaps], [{'status-info': 'Last Price ', 
                                                                                                                 'supp-data': ''}]
         else:
             raise ValueError("Invalid Ticker entered: " + ticker + '\nValid Tickers from listed Exchanges:\n' + '\n'.join(exchange_list()))
@@ -140,60 +143,74 @@ def check_ticker_validity(ticker):
         return False, True, '', handler_data_message('See Error Message(s) below:', 
                                                 traceback.format_exc())
 
-@app.callback([Output('fin-table', 'children'),
-Output('fin-df', 'data'),
-Output('stats-df', 'data'),
+@app.callback([ServersideOutput('fin-store', 'data'),
 Output('select-column', 'options'),
 Output('status-info', 'loading_state'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
-[State('ticker-input', 'value')])
-def fin_report(ticker_valid, ticker): 
+[State('ticker-input', 'value'),
+State('analysis-mode', 'value')])
+def fin_report(ticker_valid, ticker, live_analysis_mode): 
     if not ticker_valid:
-        return [], [], [], [], {'is_loading': True}, dash.no_update
+        return [], [], {'is_loading': True}, dash.no_update
     try:
         ticker_allcaps = ticker.upper()
-        df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
-        next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
+        if 1 in live_analysis_mode:
+            df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
+            next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
 
-        table = dbc.Table.from_dataframe(df[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
-                'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Net Investing Cash Flow($)']], 
-                striped=True, bordered=True, hover=True)
-        
-        stats_record = {'ticker': ticker_allcaps,
-                        'lastprice': float(lastprice.replace(',','')),
-                        'lastpricetime': lastprice_time,
-                        'beta': beta,
-                        'next_earnings_date': next_earnings_date
-                        }
-        
-        supp_data_notes = f'MRQ report ending: {report_date_note},\n' \
-            f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
-            f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
-            f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
-            f"Beta: {beta},\n" \
-            f"Next Earnings date: {next_earnings_date},\n"
-            
-        handler_data = {'status-info': lastprice + ' @ ' + lastprice_time, 
-                        'supp-data': supp_data_notes}
-        select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
+            stats_record = {'ticker': ticker_allcaps,
+                            'lastprice': float(lastprice.replace(',','')),
+                            'lastpricetime': lastprice_time,
+                            'beta': beta,
+                            'next_earnings_date': next_earnings_date
+                            }
 
-        return table, df.to_dict('records'), [stats_record], select_column_options, {'is_loading': False}, [handler_data]
-        # 'records' is more "compatible" than 'series'
+            supp_data_notes = f'MRQ report ending: {report_date_note},\n' \
+                f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
+                f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
+                f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
+                f"Beta: {beta},\n" \
+                f"Next Earnings date: {next_earnings_date},\n"
+
+            handler_data = {'status-info': lastprice + ' @ ' + lastprice_time, 
+                            'supp-data': supp_data_notes}
+            select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
+
+            return {ticker_allcaps: {'fin_report_dict': df.to_dict('records'), 'stats_dict': stats_record}}, select_column_options, {'is_loading': False}, [handler_data]
+            # 'records' is more "compatible" than 'series'
+        else:
+            raise PreventUpdate     # pull output callback from from server cache or database
     except Exception as e:       
         logger.exception(e)
-        return [], [], [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', 
+        return [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', 
                                                                 traceback.format_exc())
 
+@app.callback(Output('fin-table', 'children'),
+Input('fin-store', 'data'),
+State('ticker-input', 'value'))
+def update_historical_table(df_dict, ticker):
+    if not df_dict:
+        return []
+    try:
+        return dbc.Table.from_dataframe(pd.DataFrame.from_dict(df_dict[ticker]['fin_report_dict'])[['index', 'Revenue($)', 'EPS($)', 'EPS Growth(%)', 
+              'Pretax Income($)', 'Shareholder Equity($)', 'Longterm Debt($)', 'Net Investing Cash Flow($)']], 
+              striped=True, bordered=True, hover=True)
+    except Exception as e:
+        logger.exception(e)
+        return []
+
+
 @app.callback(Output('plot-indicators', 'figure'),
-[Input('select-column', 'value'),
-Input('fin-df', 'data')])
-def update_graph(column_name, df_dict):
+[Input('fin-store', 'data'),
+Input('select-column', 'value')],
+State('ticker-input', 'value'))
+def update_graph(df_dict, column_name, ticker):
     if not df_dict:
         return {}
     try:
-        df = pd.DataFrame.from_dict(df_dict)
-        df = pd.concat([df.iloc[:,0], df.iloc[:,1:].applymap(get_number_from_string)], axis=1)
+        df_str_format = pd.DataFrame.from_dict(df_dict[ticker]['fin_report_dict'])
+        df = pd.concat([df_str_format.iloc[:,0], df_str_format.iloc[:,1:].applymap(get_number_from_string)], axis=1)
         for col in list(df.columns):
             if '%' in col:  # scale up ratio by 100 if unit is %
                 df[col] = df[col]*100
@@ -201,7 +218,7 @@ def update_graph(column_name, df_dict):
                         line_shape='spline')
         fig.update_traces(mode='lines+markers')
         fig.update_layout(
-            title="Past Performance is not a guarantee of Future Returns",
+            title=ticker + ": Past Performance is not a guarantee of Future Returns",
             xaxis_title="Year",
             yaxis_title="Value ($ or Ratio or %)",
             legend_title="Parameter(s)"
@@ -214,7 +231,7 @@ def update_graph(column_name, df_dict):
 @app.callback([Output('dcf-table', 'children'),
 Output('dcf-data', 'children'),
 Output('handler-dcf-data', 'data')],
-[Input('stats-df', 'data'),
+[Input('fin-store', 'data'),
 Input('rgr-next', 'value'),
 Input('opm-next', 'value'),
 Input('cagr-2-5', 'value'),

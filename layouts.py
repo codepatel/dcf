@@ -51,32 +51,39 @@ dcflayout = html.Div([
     dbc.Row([
         dbc.Col([
         make_card("Ticker for Analysis", "info", [ticker_inputs('ticker-input', 'date-picker', 12*5),
-        # dbc.Select(
-        #     id='ticker-input', 
-        #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
-        #     value='AAPL',
-        #     placeholder='Start typing Ticker, press Enter'),
-        dbc.FormGroup(
-                [
-                    dbc.Label("Analysis mode selection: (if inactive, use Snapshot mode)"),
-                    dbc.Checklist(
-                    options=[
-                        {"label": "Live?", "value": 1},
-                    ],
-                    value=[1],
-                    id="analysis-mode",
-                    switch=True,
-                    ),
-                ]
-        ),
+            # dbc.Select(
+            #     id='ticker-input', 
+            #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
+            #     value='AAPL',
+            #     placeholder='Start typing Ticker, press Enter'),
+            dbc.FormGroup(
+                    [
+                        dbc.Label("Analysis mode selection: (if inactive, use Snapshot mode)"),
+                        dbc.Checklist(
+                        options=[
+                            {"label": "Live?", "value": 1},
+                        ],
+                        value=[1],
+                        id="analysis-mode",
+                        switch=True,
+                        ),
+                    ]
+            ),
+            html.Data(id='snapshot-uuid', value='95df36ac-bc52-52e1-bdf6-bac53b7aa4ca'), 
+            html.Div([dbc.Button('Save Snapshot', id='save-snapshot', color='primary'),
+                html.Span(dbc.NavLink('Snapshot Link to Bookmark', id='snapshot-link', href='/apps/dcf/AAPL', disabled=True), style={"vertical-align": "middle"}),
+                ]),
         ]), 
         html.Div(id='ticker-allcaps'), 
-        html.Data(id='snapshot-uuid', value='95df36ac-bc52-52e1-bdf6-bac53b7aa4ca'), 
-        html.Div([dbc.Button('Save Snapshot', id='save-snapshot', color='primary'),
-            html.Span(dbc.NavLink('Snapshot link', id='snapshot-link', href='/apps/dcf/AAPL', disabled=True), style={"vertical-align": "middle"}),
-        ]),
-        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}))),
-        make_card('Supplemental Info', 'success', dbc.Spinner(html.P(id='supp-info', loading_state={'is_loading': True})))
+        
+        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}), fullscreen=False)),
+        make_card('Supplemental Info', 'success', dbc.Spinner([html.P(id='supp-info'),
+            dcc.Store(id='fin-store'),
+            dcc.Store(id="handler-parseURL"),
+            dcc.Store(id="handler-ticker-valid"),
+            dcc.Store(id="handler-past-data"), 
+            dcc.Store(id="handler-dcf-data"),
+            ]))
         ]),
         dbc.Col([
         make_card('DCF Inputs - Company factors', 'info', dbc.Tabs([
@@ -141,13 +148,7 @@ dcflayout = html.Div([
     dbc.Row([
         dbc.Col([
             make_card("Past records Financial table (Current Year is TTM/MRQ) ", "secondary", 
-            dbc.Spinner(html.Div(id="fin-table"))),  
-            dt.DataTable(id="fin-df"),
-            dt.DataTable(id="stats-df"),
-            dt.DataTable(id="handler-parseURL"),
-            dt.DataTable(id="handler-ticker-valid"),
-            dt.DataTable(id="handler-past-data"), 
-            dt.DataTable(id="handler-dcf-data"),
+            dbc.Spinner(html.Div(id="fin-table"))),              
             html.Small('Data source: https://www.marketwatch.com/ Copyright 2020 FactSet Research Systems Inc. All rights reserved. Source FactSet Fundamentals')
         ]),
         dbc.Col([html.Div([

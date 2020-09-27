@@ -269,11 +269,12 @@ Output('debt-book-value', 'value'),
 Output('interest-expense', 'value'),
 Output('cash', 'value'),
 Output('shares-outstanding', 'value')],
-[Input('fin-df', 'data')])
+[Input('fin-store', 'data')])
 def update_current_year_values(df_dict):
     if not df_dict:
         raise PreventUpdate
     try:
+        df_dict = list(df_dict.values())[0]['fin_report_dict']
         for y in df_dict:
             if y['Research & Development($)'] == '-' or y['Research & Development($)'] == '--':
                 y['Research & Development($)'] = '0'
@@ -301,8 +302,7 @@ def update_current_year_values(df_dict):
 
 
 @app.callback([Output('cost-of-cap', 'value')],
-[Input('fin-df', 'data'),
-Input('stats-df', 'data'),
+[Input('fin-store', 'data'),
 Input('debt-book-value', 'value'),
 Input('interest-expense', 'value'),
 Input('average-maturity', 'value'),
@@ -319,13 +319,13 @@ Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value')],
 [State('terminal-growth-rate', 'disabled'),
 State('terminal-growth-rate', 'value')])
-def get_cost_of_capital(df_dict, stats_dict, *args):
-    if not df_dict or not stats_dict:
+def get_cost_of_capital(df_dict, *args):
+    if not df_dict:
         raise PreventUpdate
     try:
-        year0_dict = df_dict[-1]
+        year0_dict = list(df_dict.values())[0]['fin_report_dict'][-1]
         equity_market_value = get_number_from_string(year0_dict['Shares Outstanding']) * stats_dict[0]['lastprice'] /1e6
-        beta = stats_dict[0]['beta'] or 1
+        beta = list(df_dict.values())[0]['stats_dict']['beta'] or 1
         debt_book_value, interest_expense_debt, average_maturity, pretax_cost_of_debt, convertible_debt_book_value, \
             convertible_market_value, convertible_debt_portion_market_value, preferred_num_shares, preferred_price_pershare, preferred_dividend_pershare, debt_value_op_leases, \
                 erp, tax_rate, riskfree_rate, terminal_growth_eq_riskfree_rate, terminal_growth_rate = args

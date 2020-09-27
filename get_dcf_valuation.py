@@ -5,11 +5,11 @@ from get_fin_report import get_number_from_string, get_string_from_number
 # Assumptions for DCF:
 TERMINAL_YEAR_LENGTH = 10
 
-def get_dcf_df(stats_dict=[], rgr_next='5', opm_next='10', 
+def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10', 
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
                     tax_rate='15', riskfree_rate='3', terminal_growth_rate='3',  
                     cost_of_cap='8.5', run_dcf_button_clicks=None, *args):
-    last_price = stats_dict[0]['lastprice']
+    last_price = list(df_dict.values())[0]['stats_dict']['lastprice']
 
     rgr_next = float(rgr_next)/100
     opm_next = float(opm_next)/100
