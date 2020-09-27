@@ -79,6 +79,7 @@ dcflayout = html.Div([
         make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}), fullscreen=False)),
         make_card('Supplemental Info', 'success', dbc.Spinner([html.P(id='supp-info'),
             dcc.Store(id='fin-store'),
+            dcc.Store(id='dcf-store'),
             dcc.Store(id="handler-parseURL"),
             dcc.Store(id="handler-ticker-valid"),
             dcc.Store(id="handler-past-data"), 

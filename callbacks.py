@@ -79,11 +79,13 @@ Output('snapshot-link', 'disabled')],
 Input('save-snapshot', 'n_clicks'),
 Input('ticker-input', 'value'),
 Input('snapshot-uuid', 'value')],
-State('fin-store', 'data'))
-def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid, df_dict):
+State('fin-store', 'data'),
+State('dcf-store', 'data'))
+def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid, df_dict, dcf_dict):
     if 1 in live_analysis_mode: # generate a fresh UUID
         snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
         if save_button_clicked:
+            df_dict[ticker] = {**df_dict[ticker], **dcf_dict[ticker]}
             db.set(ticker+'-'+snapshot_uuid, json.dumps(df_dict))
         return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
@@ -239,7 +241,8 @@ def update_graph(df_dict, column_name, ticker):
         logger.exception(e)
         return {}
 
-@app.callback([Output('dcf-table', 'children'),
+@app.callback([ServersideOutput('dcf-store', 'data'),
+Output('dcf-table', 'children'),
 Output('dcf-data', 'children'),
 Output('handler-dcf-data', 'data')],
 [Input('fin-store', 'data'),
@@ -267,12 +270,25 @@ Input('options-value', 'value')],
 [State('convergence-year', 'value'),
 State('marginal-tax', 'value'),
 State('prob-failure', 'value'),
-State('terminal-growth-rate', 'disabled'),])
+State('terminal-growth-rate', 'disabled'),
+State('analysis-mode', 'value'),
+State('snapshot-uuid', 'value')])
 def dcf_valuation(*args, **kwargs):    
     if not args[0]:
-        return [], [], dash.no_update
+        return [], [], [], dash.no_update
     try:
-        dcf_df, dcf_output_dict = get_dcf_df(*args)
+        df_dict = args[0]
+        live_analysis_mode = args[-2]
+        snapshot_uuid = args[-1]
+        ticker_allcaps = list(df_dict.keys())[0]
+        db_key = ticker_allcaps+'-'+snapshot_uuid
+        if 1 in live_analysis_mode or not db.exists(db_key):
+            dcf_df, dcf_output_dict = get_dcf_df(*args)
+        else:
+            df_dict = json.loads(db.get(db_key))
+            dcf_df = pd.DataFrame.from_dict(df_dict[ticker_allcaps]['dcf_df_dict'])
+            dcf_output_dict = df_dict[ticker_allcaps]['dcf_output_dict']
+        dcf_store_dict = {ticker_allcaps: {'dcf_df_dict': dcf_df.to_dict('records'), 'dcf_output_dict': dcf_output_dict}}
         dcf_output_df = pd.DataFrame({
                             'Price': [dcf_output_dict['last_price']],
                             'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
@@ -280,10 +296,10 @@ def dcf_valuation(*args, **kwargs):
                             'PV Total': [get_string_from_number(dcf_output_dict['PV_sum'])],
                             'PV Terminal Value': [get_string_from_number(dcf_output_dict['PV_terminal_value'])],
                             })
-        return make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True), dash.no_update
+        return dcf_store_dict, make_table('dcf-df', dcf_df), dbc.Table.from_dataframe(dcf_output_df, striped=True, bordered=True, hover=True), dash.no_update
     except TypeError as e:
         logger.exception(e)
-        return [], replace_str_element_w_dash_component(traceback.format_exc()), handler_data_message('See Error Message(s) in DCF outputs:', '')
+        return [], [], replace_str_element_w_dash_component(traceback.format_exc()), handler_data_message('See Error Message(s) in DCF outputs:', '')
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate
