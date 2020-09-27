@@ -66,7 +66,6 @@ def parse_ticker(dcf_app_active, pathname):
                         raise ValueError("Bad Snapshot ID from URL: " + parse_ticker[2])
                 except:
                     return parse_ticker[1].upper() or DEFAULT_TICKER, [], '', handler_data_message('See Error Message(s) below:', traceback.format_exc())
-
             else:
                 return parse_ticker[1].upper(), [], str(uuid.uuid5(uuid.uuid4(), parse_ticker[1].upper())), dash.no_update
     else:
@@ -79,13 +78,12 @@ Output('snapshot-link', 'disabled')],
 Input('save-snapshot', 'n_clicks'),
 Input('ticker-input', 'value'),
 Input('snapshot-uuid', 'value')],
-State('fin-store', 'data'),
 State('dcf-store', 'data'))
-def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid, df_dict, dcf_dict):
+def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid, df_dict):
     if 1 in live_analysis_mode: # generate a fresh UUID
         snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
         if save_button_clicked:
-            df_dict[ticker] = {**df_dict[ticker], **dcf_dict[ticker]}
+            # df_dict[ticker] = {**df_dict[ticker], **dcf_dict[ticker]}
             db.set(ticker+'-'+snapshot_uuid, json.dumps(df_dict))
         return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
@@ -280,15 +278,23 @@ def dcf_valuation(*args, **kwargs):
         df_dict = args[0]
         live_analysis_mode = args[-2]
         snapshot_uuid = args[-1]
-        ticker_allcaps = list(df_dict.keys())[0]
-        db_key = ticker_allcaps+'-'+snapshot_uuid
-        if 1 in live_analysis_mode or not db.exists(db_key):
+        ticker = list(df_dict.keys())[0]
+        dcf_store_dict_json = db.get(ticker+'-'+snapshot_uuid)
+        dcf_store_dict = json.loads(dcf_store_dict_json) if dcf_store_dict_json else None
+        safe_get_dcf = dcf_store_dict.get(ticker).get('dcf_df_dict') if dcf_store_dict else None
+        if 1 in live_analysis_mode or not safe_get_dcf:
             dcf_df, dcf_output_dict = get_dcf_df(*args)
         else:
-            df_dict = json.loads(db.get(db_key))
-            dcf_df = pd.DataFrame.from_dict(df_dict[ticker_allcaps]['dcf_df_dict'])
-            dcf_output_dict = df_dict[ticker_allcaps]['dcf_output_dict']
-        dcf_store_dict = {ticker_allcaps: {'dcf_df_dict': dcf_df.to_dict('records'), 'dcf_output_dict': dcf_output_dict}}
+            dcf_df = pd.DataFrame.from_dict(safe_get_dcf)
+            dcf_output_dict = dcf_store_dict[ticker]['dcf_output_dict']
+        # Capture all inputs to dcf-store.data
+        ctx = dash.callback_context
+        dcf_store_dict = ctx.inputs.pop('fin-store.data')
+        for k, v in ctx.inputs.items():
+            dcf_store_dict[ticker][k] = v
+        dcf_store_dict[ticker]['dcf_df_dict'] = dcf_df.to_dict('records')
+        dcf_store_dict[ticker]['dcf_output_dict'] = dcf_output_dict
+        
         dcf_output_df = pd.DataFrame({
                             'Price': [dcf_output_dict['last_price']],
                             'Value': ['{:.2f}'.format(dcf_output_dict['estimated_value_per_share'])],
