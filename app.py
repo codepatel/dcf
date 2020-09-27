@@ -4,6 +4,7 @@ from flask_caching import Cache
 import dash
 import dash_bootstrap_components as dbc
 # from dash_extensions.enrich import Dash, FileSystemStore, ServersideOutputTransform, DashTransformer
+import redis
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -34,9 +35,4 @@ cache = Cache(app.server, config={
     'CACHE_THRESHOLD': 1000
 })
 
-
-
-
-
-
-
+db = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))

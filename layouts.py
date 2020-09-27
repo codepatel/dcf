@@ -3,7 +3,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_table as dt
 # Local imports
-from __init__ import VERSION
+from __init__ import VERSION, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID
 from dash_utils import make_card, ticker_inputs, make_item, make_social_media_share
 from dynamic_layouts import get_dcf_current_year_input_overrides, get_other_input_overrides
 from assets.about import source_credits, assumptions
@@ -69,9 +69,9 @@ dcflayout = html.Div([
                         ),
                     ]
             ),
-            html.Data(id='snapshot-uuid', value='95df36ac-bc52-52e1-bdf6-bac53b7aa4ca'), 
+            html.Data(id='snapshot-uuid', value=DEFAULT_SNAPSHOT_UUID), 
             html.Div([dbc.Button('Save Snapshot', id='save-snapshot', color='primary'),
-                html.Span(dbc.NavLink('Snapshot Link to Bookmark', id='snapshot-link', href='/apps/dcf/AAPL', disabled=True), style={"vertical-align": "middle"}),
+                html.Span(dbc.NavLink('Snapshot Link to Bookmark', id='snapshot-link', href='/apps/dcf/'+DEFAULT_TICKER+'/'+DEFAULT_SNAPSHOT_UUID, disabled=True), style={"vertical-align": "middle"}),
                 ]),
         ]), 
         html.Div(id='ticker-allcaps'), 

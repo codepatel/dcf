@@ -14,8 +14,8 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 # from iexfinance.stocks import Stock
 # Local imports
-from __init__ import logger, HERE, TIMEOUT_12HR, DEFAULT_TICKER
-from app import app, cache
+from __init__ import logger, HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID
+from app import app, cache, db
 from dash_utils import make_table, replace_str_element_w_dash_component
 from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
@@ -78,10 +78,13 @@ Output('snapshot-link', 'disabled')],
 [Input('analysis-mode', 'value'),
 Input('save-snapshot', 'n_clicks'),
 Input('ticker-input', 'value'),
-Input('snapshot-uuid', 'value')])
-def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid):
+Input('snapshot-uuid', 'value')],
+State('fin-store', 'data'))
+def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid, df_dict):
     if 1 in live_analysis_mode: # generate a fresh UUID
         snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
+        if save_button_clicked:
+            db.set(ticker+'-'+snapshot_uuid, json.dumps(df_dict))
         return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
         return dash.no_update, True, True
@@ -149,38 +152,46 @@ Output('status-info', 'loading_state'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
 [State('ticker-input', 'value'),
-State('analysis-mode', 'value')])
-def fin_report(ticker_valid, ticker, live_analysis_mode): 
+State('analysis-mode', 'value'),
+State('snapshot-uuid', 'value')])
+def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid): 
     if not ticker_valid:
         return [], [], {'is_loading': True}, dash.no_update
     try:
         ticker_allcaps = ticker.upper()
-        if 1 in live_analysis_mode:
+        db_key = ticker_allcaps+'-'+snapshot_uuid
+        if 1 in live_analysis_mode or not db.exists(db_key):
             df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
             next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
 
             stats_record = {'ticker': ticker_allcaps,
                             'lastprice': float(lastprice.replace(',','')),
-                            'lastpricetime': lastprice_time,
+                            'lastprice_time': lastprice_time,
                             'beta': beta,
-                            'next_earnings_date': next_earnings_date
+                            'next_earnings_date': next_earnings_date,
+                            'report_date_note': report_date_note
                             }
 
-            supp_data_notes = f'MRQ report ending: {report_date_note},\n' \
-                f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
-                f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
-                f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
-                f"Beta: {beta},\n" \
-                f"Next Earnings date: {next_earnings_date},\n"
-
-            handler_data = {'status-info': lastprice + ' @ ' + lastprice_time, 
-                            'supp-data': supp_data_notes}
-            select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
-
-            return {ticker_allcaps: {'fin_report_dict': df.to_dict('records'), 'stats_dict': stats_record}}, select_column_options, {'is_loading': False}, [handler_data]
-            # 'records' is more "compatible" than 'series'
+            df_dict = {ticker_allcaps: {'fin_report_dict': df.to_dict('records'), 'stats_dict': stats_record}}
         else:
-            raise PreventUpdate     # pull output callback from from server cache or database
+            df_dict = json.loads(db.get(db_key))  # pull output callback from from server cache or database: redis
+            if not df_dict:
+                raise KeyError('Redis Key not found: ' + db_key + '\nPlease click the app tab link to refresh state!')
+            df = pd.DataFrame.from_dict(df_dict[ticker_allcaps]['fin_report_dict'])
+            stats_record = df_dict[ticker_allcaps]['stats_dict']
+        select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
+
+        supp_data_notes = f"MRQ report ending: {stats_record['report_date_note']},\n" \
+            f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
+            f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
+            f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
+            f"Beta: {stats_record['beta']},\n" \
+            f"Next Earnings date: {stats_record['next_earnings_date']},\n"
+        handler_data = {'status-info': f"{stats_record['lastprice']} @ {stats_record['lastprice_time']}", 
+                        'supp-data': supp_data_notes}
+        return df_dict, select_column_options, {'is_loading': False}, [handler_data]
+        # 'records' is more "compatible" than 'series'
+        
     except Exception as e:       
         logger.exception(e)
         return [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', 
