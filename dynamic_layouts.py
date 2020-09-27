@@ -1,5 +1,5 @@
 from statistics import mean
-from app import app
+import json
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -7,6 +7,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 # Local imports
 from __init__ import logger
+from app import app, db
 from get_fin_report import get_number_from_string
 
 def get_dcf_current_year_input_overrides():
@@ -269,30 +270,51 @@ Output('debt-book-value', 'value'),
 Output('interest-expense', 'value'),
 Output('cash', 'value'),
 Output('shares-outstanding', 'value')],
-[Input('fin-df', 'data')])
-def update_current_year_values(df_dict):
+[Input('fin-store', 'data')],
+[State('analysis-mode', 'value'),
+State('snapshot-uuid', 'value'),])
+def update_current_year_values(df_dict, live_analysis_mode, snapshot_uuid):
     if not df_dict:
         raise PreventUpdate
     try:
-        for y in df_dict:
-            if y['Research & Development($)'] == '-' or y['Research & Development($)'] == '--':
-                y['Research & Development($)'] = '0'
-        year0_dict = df_dict[-1]
-        year0_revenue = get_number_from_string(year0_dict['Revenue($)'])/1e6
-        year0_randd = get_number_from_string(year0_dict['Research & Development($)'])/1e6
-        year0_ebit = get_number_from_string(year0_dict['Pretax Income($)'])/1e6 + year0_randd
-        year0_capex = -round(get_number_from_string(year0_dict['Net Investing Cash Flow($)']))/1e6
-        year0_rgr = round(100 * ((get_number_from_string(df_dict[-2]['Revenue($)'])/get_number_from_string(df_dict[0]['Revenue($)'])) ** (1/(len(df_dict)-2)) - 1), 2)
+        ticker = list(df_dict.keys())[0]
+        dcf_store_dict_json = db.get(ticker+'-'+snapshot_uuid)
+        dcf_store_dict = json.loads(dcf_store_dict_json) if dcf_store_dict_json else None
+        safe_get_year0_revenue = dcf_store_dict.get(ticker).get('year0-revenue.value') if dcf_store_dict else None
+        if 1 in live_analysis_mode or not safe_get_year0_revenue:
+            df_dict = list(df_dict.values())[0]['fin_report_dict']
+            for y in df_dict:
+                if y['Research & Development($)'] == '-' or y['Research & Development($)'] == '--':
+                    y['Research & Development($)'] = '0'
+            year0_dict = df_dict[-1]
+            year0_revenue = get_number_from_string(year0_dict['Revenue($)'])/1e6
+            year0_randd = get_number_from_string(year0_dict['Research & Development($)'])/1e6
+            year0_ebit = get_number_from_string(year0_dict['Pretax Income($)'])/1e6 + year0_randd
+            year0_capex = -round(get_number_from_string(year0_dict['Net Investing Cash Flow($)']))/1e6
+            year0_rgr = round(100 * ((get_number_from_string(df_dict[-2]['Revenue($)'])/get_number_from_string(df_dict[0]['Revenue($)'])) ** (1/(len(df_dict)-2)) - 1), 2)
 
-        cagr_2_5 = min(year0_rgr, 15)    # starting point same as past performance
-        opm_target = min(100 * mean([ (get_number_from_string(y['Pretax Income($)']) + get_number_from_string(y['Research & Development($)']) )/
-                            get_number_from_string(y['Revenue($)']) for y in df_dict]), 50 )
-        sales_to_cap = max(0.05, mean([get_number_from_string(y['Sales-to-Capital(%)']) for y in df_dict]) )
+            cagr_2_5 = min(year0_rgr, 15)    # starting point same as past performance
+            opm_target = min(100 * mean([ (get_number_from_string(y['Pretax Income($)']) + get_number_from_string(y['Research & Development($)']) )/
+                                get_number_from_string(y['Revenue($)']) for y in df_dict]), 50 )
+            sales_to_cap = max(0.05, mean([get_number_from_string(y['Sales-to-Capital(%)']) for y in df_dict]) )
 
-        debt_book_value = (get_number_from_string(year0_dict['Longterm Debt($)']) or 0)/1e6
-        interest_expense_debt = (get_number_from_string(year0_dict['Interest Expense($)']) or 0)/1e6
-        cash = (get_number_from_string(year0_dict['Cash($)']) or 0)/1e6
-        shares_outstanding = get_number_from_string(year0_dict['Shares Outstanding'])/1e6
+            debt_book_value = (get_number_from_string(year0_dict['Longterm Debt($)']) or 0)/1e6
+            interest_expense_debt = (get_number_from_string(year0_dict['Interest Expense($)']) or 0)/1e6
+            cash = (get_number_from_string(year0_dict['Cash($)']) or 0)/1e6
+            shares_outstanding = get_number_from_string(year0_dict['Shares Outstanding'])/1e6
+        else:
+            year0_revenue = safe_get_year0_revenue or 0
+            year0_randd = dcf_store_dict.get(ticker).get('year0-randd.value') or 0
+            year0_capex = dcf_store_dict.get(ticker).get('year0-capex.value') or 0
+            year0_ebit = dcf_store_dict.get(ticker).get('year0-ebit.value') or 0
+            year0_rgr = dcf_store_dict.get(ticker).get('year0-rgr.value') or 0
+            cagr_2_5 = dcf_store_dict.get(ticker).get('cagr-2-5.value') or 0
+            opm_target = dcf_store_dict.get(ticker).get('opm-target.value') or 0
+            sales_to_cap = dcf_store_dict.get(ticker).get('sales-to-cap.value') or 0
+            debt_book_value = dcf_store_dict.get(ticker).get('debt-book-value.value') or 0
+            interest_expense_debt = dcf_store_dict.get(ticker).get('interest-expense.value') or 0
+            cash = dcf_store_dict.get(ticker).get('cash.value') or 0
+            shares_outstanding = dcf_store_dict.get(ticker).get('shares-outstanding.value') or 0
 
         return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt, cash, shares_outstanding
     except Exception as e:
@@ -301,8 +323,7 @@ def update_current_year_values(df_dict):
 
 
 @app.callback([Output('cost-of-cap', 'value')],
-[Input('fin-df', 'data'),
-Input('stats-df', 'data'),
+[Input('fin-store', 'data'),
 Input('debt-book-value', 'value'),
 Input('interest-expense', 'value'),
 Input('average-maturity', 'value'),
@@ -318,38 +339,48 @@ Input('erp-calculated', 'value'),
 Input('tax-rate', 'value'),
 Input('riskfree-rate', 'value')],
 [State('terminal-growth-rate', 'disabled'),
-State('terminal-growth-rate', 'value')])
-def get_cost_of_capital(df_dict, stats_dict, *args):
-    if not df_dict or not stats_dict:
+State('terminal-growth-rate', 'value'),
+State('analysis-mode', 'value'),
+State('snapshot-uuid', 'value'),])
+def get_cost_of_capital(df_dict, *args):
+    if not df_dict:
         raise PreventUpdate
     try:
-        year0_dict = df_dict[-1]
-        equity_market_value = get_number_from_string(year0_dict['Shares Outstanding']) * stats_dict[0]['lastprice'] /1e6
-        beta = stats_dict[0]['beta'] or 1
+        df_dict_value = list(df_dict.values())[0]
+        year0_dict = df_dict_value['fin_report_dict'][-1]
+        equity_market_value = get_number_from_string(year0_dict['Shares Outstanding']) * df_dict_value['stats_dict']['lastprice'] /1e6
+        beta = df_dict_value['stats_dict']['beta'] or 1
         debt_book_value, interest_expense_debt, average_maturity, pretax_cost_of_debt, convertible_debt_book_value, \
             convertible_market_value, convertible_debt_portion_market_value, preferred_num_shares, preferred_price_pershare, preferred_dividend_pershare, debt_value_op_leases, \
-                erp, tax_rate, riskfree_rate, terminal_growth_eq_riskfree_rate, terminal_growth_rate = args
+            erp, tax_rate, riskfree_rate, terminal_growth_eq_riskfree_rate, terminal_growth_rate, \
+            live_analysis_mode, snapshot_uuid = args
 
-        pretax_cost_of_debt /= 100  # convert to %
-        convertible_debt_portion_market_value /= 100
+        ticker = list(df_dict.keys())[0]
+        dcf_store_dict = db.get(ticker+'-'+snapshot_uuid)
+        safe_get_coc = json.loads(dcf_store_dict).get(ticker).get('cost-of-cap.value') if dcf_store_dict else None
+        if 1 in live_analysis_mode or not safe_get_coc:
+            pretax_cost_of_debt /= 100  # convert to %
+            convertible_debt_portion_market_value /= 100
 
-        # =B19*(1-(1+B25)^(-B20))/B25+B18/(1+B25)^B20
-        debt_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
-        convertible_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (convertible_debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
-        convertible_equity_portion_market_value = convertible_market_value * (1 - convertible_debt_portion_market_value)
-        # TODO: Why Convertible Equity not used in CoC?
-        total_debt = debt_market_value + convertible_debt_portion_market_value + debt_value_op_leases
+            # =B19*(1-(1+B25)^(-B20))/B25+B18/(1+B25)^B20
+            debt_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
+            convertible_market_value = (interest_expense_debt * (1-(1+pretax_cost_of_debt) ** (-average_maturity)) / pretax_cost_of_debt) + (convertible_debt_book_value / ((1+pretax_cost_of_debt) ** average_maturity))
+            convertible_equity_portion_market_value = convertible_market_value * (1 - convertible_debt_portion_market_value)
+            # TODO: Why Convertible Equity not used in CoC?
+            total_debt = debt_market_value + convertible_debt_portion_market_value + debt_value_op_leases
 
-        cap_structure_list = [equity_market_value, preferred_num_shares * preferred_price_pershare, total_debt]
-        total_capital = sum(cap_structure_list)
-        wcc = [c/total_capital for c in cap_structure_list]
-        coc = [riskfree_rate + (beta * erp), 
-                100*preferred_dividend_pershare/preferred_price_pershare, 
-                100*pretax_cost_of_debt * (1-tax_rate/100)]
-        # Use 5 basis points over the Terminal Growth rate as Minimum CoC
-        min_coc = 0.05 + (riskfree_rate if terminal_growth_eq_riskfree_rate else terminal_growth_rate)
+            cap_structure_list = [equity_market_value, preferred_num_shares * preferred_price_pershare, total_debt]
+            total_capital = sum(cap_structure_list)
+            wcc = [c/total_capital for c in cap_structure_list]
+            coc = [riskfree_rate + (beta * erp), 
+                    100*preferred_dividend_pershare/preferred_price_pershare, 
+                    100*pretax_cost_of_debt * (1-tax_rate/100)]
+            # Use 5 basis points over the Terminal Growth rate as Minimum CoC
+            min_coc = 0.05 + (riskfree_rate if terminal_growth_eq_riskfree_rate else terminal_growth_rate)
 
-        return [max(sum([wcc[c]*rate for c, rate in enumerate(coc)]), min_coc)]
+            return [max(sum([wcc[c]*rate for c, rate in enumerate(coc)]), min_coc)]
+        else:
+            return [safe_get_coc]
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate
