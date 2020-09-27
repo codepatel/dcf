@@ -35,4 +35,4 @@
     * Debug mode: on
     ```
 7. Point your browser to: http://localhost:8050/apps/dcf/AAPL to get started.
-8. Validate your analysis with others by clicking "Save Snapshot", use the Snapshot Link to Bookmark or share with others.
+8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark or share with others or look it up in future.
