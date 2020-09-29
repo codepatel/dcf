@@ -2,12 +2,12 @@ import os
 import logging
 from pathlib import Path
 
-if not os.path.exists('tmp'):   # use /tmp for logging and caching
-    os.makedirs('tmp')
+if not os.path.exists('app'):   # use /app for logging and caching
+    os.makedirs('app')
 
 logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] %(message)s',
                 datefmt='%Y-%m-%d_%I:%M:%S_%p',
-                filename=os.path.expandvars('./tmp/app_DCFoutput.log'),
+                filename=os.path.expandvars('./app/app_DCFoutput.log'),
                 filemode='w',
                 level=logging.INFO)
 logger = logging.getLogger()

@@ -25,7 +25,7 @@
     FLASK_ENV = development
     REDIS_URL = redis://localhost:6379
     ```
-6. `python index.py`
+6. `python index.py`  
     You can expect to see a command-line output like:
     ```
     Dash is running on http://127.0.0.1:8050/
@@ -35,4 +35,4 @@
     * Debug mode: on
     ```
 7. Point your browser to: http://localhost:8050/apps/dcf/AAPL to get started.
-8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark or share with others or look it up in future.
+8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark and share with others or look it up in future.
