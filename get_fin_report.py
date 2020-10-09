@@ -5,13 +5,14 @@ from datetime import date
 from time import sleep
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import logger, TIMEOUT_12HR
+from __init__ import TIMEOUT_12HR, logger, ticker_dict
 from app import cache
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 @cache.memoize(timeout=TIMEOUT_12HR)
 def get_financial_report(ticker):
-# try:
+    if ticker not in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
+        raise ValueError("Invalid Ticker entered: " + ticker)
     urlincome = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials'
     urlbalancesheet = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials/balance-sheet'
     urlcashflow = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials/cash-flow'
@@ -102,7 +103,7 @@ def get_financial_report(ticker):
     return df, lastprice, lastprice_time, report_date_note
 
 def get_souped_text(url):
-    sleep(0.1)  # throttle scraping
+    # sleep(0.1)  # throttle scraping
     return BeautifulSoup(requests.get(url).text, features="html.parser") #read in
 
 def get_titles(souptext):
@@ -238,5 +239,10 @@ def get_yahoo_fin_values(ticker):
 
 # %%
 if __name__ == '__main__':
-    # df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
-    pass
+    import cProfile
+    import pstats
+    pr = cProfile.Profile()
+    pr.enable()
+    df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
+    pr.disable()
+    pstats.Stats(pr).strip_dirs().sort_stats('time').print_stats(0.05)  # Profile only Top 5% time spent

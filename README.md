@@ -18,7 +18,8 @@
     - If you use a virtual environment such as pipenv: `pipenv run pip install -r requirements.txt`
 4. [Install Redis Server](https://redis.io/) - an in-memory data structure store, used as a database, cache and message broker.
     - [Brew Install Redis on Mac](https://gist.github.com/tomysmile/1b8a321e7c58499ef9f9441b2faa0aa8)
-    - [For Linux or Windows: Installing Redis From Source](https://realpython.com/python-redis/#installing-redis-from-source)
+    - [For Linux: Installing Redis From Source](https://realpython.com/python-redis/#installing-redis-from-source)
+    - [For Windows - Memurai (a fork of Redis)](https://www.memurai.com/get-memurai)
 5. Create a .env file with following env variables defined:
    ```
     DEBUG = True

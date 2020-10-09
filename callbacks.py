@@ -14,25 +14,11 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 # from iexfinance.stocks import Stock
 # Local imports
-from __init__ import logger, HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID
+from __init__ import HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID, logger, ticker_dict, exchange_list
 from app import app, cache, db
 from dash_utils import make_table, replace_str_element_w_dash_component
 from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
 from get_dcf_valuation import get_dcf_df
-
-# Delete pyc: find . -name \*.pyc -delete
-
-@cache.memoize(timeout=TIMEOUT_12HR*2*30)    # Use Cache Timeout of 30 days for symbols data
-def get_symbols():
-    with open(Path(HERE, 'assets', 'symbols.json')) as symfile:
-        symdata = json.load(symfile)
-    return symdata
-
-def ticker_dict():  # For user-entered ticker validation
-    return {s['symbol']:s['symbol']+'('+s['exchange']+'):'+s['name'] for s in get_symbols()}
-
-def exchange_list():
-    return list(set([s['exchange'] for s in get_symbols()]))
 
 def handler_data_message(title, exception_obj):
     return [{
