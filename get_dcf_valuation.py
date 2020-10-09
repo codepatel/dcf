@@ -9,6 +9,9 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
                 cagr_2_5='10', opm_target='20', sales_to_cap='1.2', 
                     tax_rate='15', riskfree_rate='3', terminal_growth_rate='3',  
                     cost_of_cap='8.5', run_dcf_button_clicks=None, *args):
+    """
+    Calculate the Discounted Cash Flow Outputs and return a df with the table information
+    """
     last_price = list(df_dict.values())[0]['stats_dict']['lastprice']
 
     rgr_next = float(rgr_next)/100
@@ -98,9 +101,3 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
     df = df.reindex(columns=[column_list[-1]] + column_list[:-1], copy=False)
     
     return df, dcf_output_dict
-
-# %%
-if __name__ == "__main__":
-    from get_fin_report import get_financial_report
-    df_past, a, b, c = get_financial_report('AAPL')
-    dcf_df, dcf_dict = get_dcf_df(df_past.to_dict('records'), [{'status-info': '100 @'}])
