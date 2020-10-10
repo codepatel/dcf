@@ -1,37 +1,39 @@
-## Welcome to GitHub Pages
+#### About this App ####
+- [Inspired by Professor Aswath Damodaran's teachings and Mission](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/home.htm)
+- [Prof. Damodaran's Data Sources](http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datacurrent.html)
+- [Prof. Damodaran's Valuation Tools Webcast](https://www.youtube.com/watch?v=F9GfXJ-IrSA)
+- [Prof. Damodaran's Valuation Spreadsheet Download link](http://www.stern.nyu.edu/~adamodar/pc/fcffsimpleginzuCorona.xlsx)
+- The Intrinsic Value Calculation here is not as rigorous as the spreadsheet linked above and probably over-simplified in the present version of this app. As it evolves, the App will include more features for completeness over newer releases.
 
-You can use the [editor on GitHub](https://github.com/codepatel/dcf/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+##### *Assumptions:* #####
+1. Only non-financial companies (neither banks nor insurance companies)
+2. NOLs are not accounted for in DCF valuation (to be improved in future release)
+3. Cost of Capital is fixed for the timeline of valuation and not linked to the Cost of Capital worksheet and the Country Equity Risk Premium look-up (to be improved in future release and linked to source CSV if available)
+4. Probability of failure for the firm assumes proceeds in case of bankruptcy are 50 cents on the $ of Present Value.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+#### How to setup this App locally ####
+1. `>> git clone git@github.com:codepatel/dcf.git`
+2. `>> cd dcf`
+3. `>> pip3 install -r requirements.txt` or 
+    - If you use a virtual environment such as pipenv: `>> pipenv run pip install -r requirements.txt`
+4. [Install Redis Server](https://redis.io/) - an in-memory data structure store, used as a database, cache and message broker.
+    - [Brew Install Redis on Mac](https://gist.github.com/tomysmile/1b8a321e7c58499ef9f9441b2faa0aa8)
+    - [For Linux: Installing Redis From Source](https://realpython.com/python-redis/#installing-redis-from-source)
+    - [For Windows - Memurai (a fork of Redis)](https://www.memurai.com/get-memurai)
+5. Create a .env file with following env variables defined:
+   ```
+    DEBUG = True
+    FLASK_ENV = development
+    REDIS_URL = redis://localhost:6379
+    ```
+6. `>> python index.py`  
+    You can expect to see a command-line output like:
+    ```
+    Dash is running on http://127.0.0.1:8050/
 
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/codepatel/dcf/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+    * Serving Flask app "app" (lazy loading)
+    * Environment: development
+    * Debug mode: on
+    ```
+7. Point your browser to: http://localhost:8050/apps/dcf/AAPL to get started.
+8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark and share with others or look it up in the near or distant future.
