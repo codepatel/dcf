@@ -3,3 +3,6 @@ description: To be one of the tools to educate and democratize fundamentals DCF 
 show_downloads: true
 google_analytics: 
 theme: jekyll-theme-tactile
+github:
+  zip_url: https://github.com/codepatel/dcf/archive/master.zip
+  tar_url: https://github.com/codepatel/dcf/archive/master.tar.gz
