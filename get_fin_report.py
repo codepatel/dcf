@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import requests
 from datetime import date
 from time import sleep
+import asyncio
+from aiohttp import ClientSession, ClientResponseError
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
 from __init__ import TIMEOUT_12HR, logger, ticker_dict
@@ -22,7 +24,11 @@ def get_financial_report(ticker):
     urls = [urlincome, urlbalancesheet, urlcashflow, urlqincome, urlqbalancesheet, urlqcashflow]
     findata_keys = ['ais', 'abs', 'acf', 'qis', 'qbs', 'qcf']
 
-    finsoup = {findata_keys[idx]:get_souped_text(u) for idx, u in enumerate(urls)}
+    loop = asyncio.new_event_loop()
+    # future = asyncio.ensure_future(fetch_async(urls))
+    souped_text_list = loop.run_until_complete(fetch_async(urls))
+    loop.close()
+    finsoup = {k:souped_text_list[idx] for idx, k in enumerate(findata_keys)}
 
     # build lists for the Financial statements
     isdata_lines = {'revenue': [], 'eps': [], 'pretaxincome': [], 'netincome': [],
@@ -102,9 +108,29 @@ def get_financial_report(ticker):
 
     return df, lastprice, lastprice_time, report_date_note
 
-def get_souped_text(url):
+async def fetch_async(urls):
+    tasks = []
+    # try to use one client session
+    async with ClientSession() as session:
+        for url in urls:
+            task = asyncio.ensure_future(get_souped_text(session, url))
+            tasks.append(task)
+        # await response outside the for loop
+        souped_text_list = await asyncio.gather(*tasks)
+    return souped_text_list
+
+async def get_souped_text(session, url):
     # sleep(0.1)  # throttle scraping
-    return BeautifulSoup(requests.get(url).text, features="html.parser") #read in
+    try:
+        async with session.get(url, timeout=15) as response:
+            resp = await response.read()
+        return BeautifulSoup(resp.decode('utf-8'), features="html.parser")  # read in
+    except ClientResponseError as e:
+        logger.error(e.code)
+    except asyncio.TimeoutError:
+        logger.error("Timeout")
+    except Exception as e:
+        logger.exception(e)
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})

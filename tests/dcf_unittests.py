@@ -10,13 +10,14 @@ class DCFUnitTest(unittest.TestCase):
     def setUp(self):
         self.result = None
         pass
-    def teardown(self):
+    def tearDown(self):
         pass    
     def testwithValidTicker(self):
         for ticker in ['AAPL', 'BAC', 'PGR', 'EPR', 'EAF', 'SKX', 'MU']:
             self.result = get_financial_report(ticker)
             self.assertTrue(self.result[1], 'FAIL with: ' + ticker)
     def testwithInvalidTicker(self):
+        self.assertRaises(KeyError, check_ticker_validity, 'INVALID')
         self.assertRaises(ValueError, get_financial_report, 'INVALID')
     def testwithYahooTicker(self):
         self.result = get_yahoo_fin_values('AAPL')
