@@ -1,4 +1,5 @@
-theme: jekyll-theme-tactile
 title: Welcome to Equity Valuation made easy!
 description: To be one of the tools to educate and democratize fundamentals DCF (Discounted Cash Flow) Valuation Analysis of public equity investments.
-show_downloads: "true"
+show_downloads: true
+google_analytics: 
+theme: jekyll-theme-tactile
