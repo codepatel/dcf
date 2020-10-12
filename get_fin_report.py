@@ -48,9 +48,12 @@ def get_financial_report(ticker):
 
     #get the data from the fin statement lists and use helper function get_element to index for format line#
     revenue = get_element(isdata_lines['revenue'],0) + get_element(isdata_lines['revenue'],2)
-    if isdata_lines['revenue'][1][0] != '-':    # for Financial companies top-line
-        non_interest_income = get_element(isdata_lines['revenue'],1) + get_element(isdata_lines['revenue'],3)
-        revenue = [get_string_from_number(get_number_from_string(revenue[y])+get_number_from_string(nii)) for y, nii in enumerate(non_interest_income)]
+    revenueGrowth = get_element(isdata_lines['revenue'],1) + get_element(isdata_lines['revenue'],3)
+    if len(isdata_lines['revenue']) == 10:    # for Financial companies top-line, add Interest and non-Interest Income
+        net_interest_income_after_provision = get_element(isdata_lines['revenue'],2) + get_element(isdata_lines['revenue'],7)
+        non_interest_income = get_element(isdata_lines['revenue'],4) + get_element(isdata_lines['revenue'],9)
+        revenue = [get_string_from_number(get_number_from_string(net_interest_income_after_provision[y])+get_number_from_string(nii)) for y, nii in enumerate(non_interest_income)]
+        revenueGrowth = get_element(isdata_lines['revenue'],3) + get_element(isdata_lines['revenue'],8)
     eps = get_element(isdata_lines['eps'],0) + get_element(isdata_lines['eps'],2)
     epsGrowth = get_element(isdata_lines['eps'],1) + get_element(isdata_lines['eps'],3)
     preTaxIncome = get_element(isdata_lines['pretaxincome'],0) + get_element(isdata_lines['pretaxincome'],2)
@@ -82,7 +85,7 @@ def get_financial_report(ticker):
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
-    df= pd.DataFrame({'Revenue($)': revenue, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
+    df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
             'Pretax Income($)': preTaxIncome, 'Net Income($)': netIncome, 'Interest Expense($)': interestExpense,
             'EBITDA($)': ebitda, 'Research & Development($)': resanddev, 'Shares Outstanding': outstanding_shares, 
             'Longterm Debt($)': longtermDebt, 'Shareholder Equity($)': shareholderEquity,
@@ -91,6 +94,7 @@ def get_financial_report(ticker):
             'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(date.today().year-5,date.today().year+1))
     df.reset_index(inplace=True)
+    # Derived Financial Metrics/Ratios
     df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)
     df['Capital Employed($)'] = df['Total Assets($)'].apply(get_number_from_string) - df['Total Current Liabilities($)'].apply(get_number_from_string)
     df['Sales-to-Capital(%)'] = (df['Revenue($)'].apply(get_number_from_string) / df['Capital Employed($)']).apply(get_string_from_number)
@@ -141,7 +145,7 @@ def walk_row(titlerow):
 def get_income_data(data_titles, data_lines):
     def build_income_list(data_list):
         if 'Sales' in title.text \
-                or 'Net Interest Income after Provision' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
+                or 'Net Interest Inc' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
         if 'EPS (Basic)' in title.text:
             data_lines['eps'].append(data_list)
