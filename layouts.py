@@ -211,10 +211,80 @@ sectorlayout = html.Div([
         )],
         ),  
     ]), # heading row
-    html.Div(id='sector-app-display-value', children="Under Construction! Please visit later!"),
+    html.Div(id='sector-app-display-value', children="Under Construction! Features may change without notice!", style={'backgroundColor': 'red', 'fontSize': '200%'}),
     html.Br(),
+    dbc.NavLink('IEX Cloud is the easiest way to use financial data. Get started now by clicking this referral link!', href="https://iexcloud.io/s/b47b5006"),
     html.Br(),
+    html.P("Please note that sandbox test response data shown below from IEX Cloud Sandbox APIs is purposefully manipulated to scramble values and is not suitable for production usage. Data returned in the sandbox will look real, but strings are scrambled, dates are manipulated, and numbers are changed.", style={'color': 'red'}),
+    dbc.NavLink('See this link for more information on Sandbox Testing', href="https://iexcloud.io/docs/api/#testing-sandbox"),
     html.Br(),
+
+    dcc.Store(id='sector-store'),
+    # Element for Graph plot of Sector Picks
+    dbc.Row([
+        dbc.Col([html.Div([
+        html.H5('Select Sector: '),
+        dcc.Dropdown(
+                id='select-sector',
+                options=[{'label': i, 'value': i} for i in ["Electronic Technology",
+                       "Distribution Services",
+                       "Health Technology",
+                       "Commercial Services",
+                       "Industrial Services",
+                       "Finance",
+                       "Process Industries",
+                       "Transportation",
+                       "Technology Services",
+                       "Producer Manufacturing",
+                       "Retail Trade",
+                       "Consumer Services",
+                       "Non-Energy Minerals",
+                       "Utilities",
+                       "Miscellaneous",
+                       "Health Services",
+                       "Consumer Durables",
+                       "Consumer Non-Durables",
+                       "Communications",
+                       "Energy Minerals",
+                       "Government"]],
+                value=["Electronic Technology"],
+                multi=True
+        ),
+        
+        ])
+        ]),
+    ]), # row 1
+    dbc.Row([
+        dbc.Col([
+            html.Br(),
+            dcc.Dropdown(
+                id='select-company',
+                value=[],
+                multi=True,
+                placeholder='Filter to one or more companies, start typing in dropdown'
+            ),
+            dbc.Label("Filter by Enterprise Value (in billions)", html_for="sector-ev-filter"),
+            dcc.RangeSlider(id="sector-ev-filter", min=0.01, max=10e3, step=0.01, value=[0.1, 3e3], 
+            tooltip={'always_visible': True, 'placement': 'topRight'},
+            # marks={i: str(10 ** i) for i in range(-2,4)},
+            updatemode='drag',
+            ),
+            html.H5('Crossfilter-Yaxis'),
+            dcc.Dropdown(
+                id='crossfilter-yaxis-column',
+                value='EBITDAToRevenueMargin',
+            ),
+        ], width=3),
+        dbc.Col([
+            dbc.Spinner(dcc.Graph(id='sector-distribution'
+            )),
+            html.H5('Crossfilter-Xaxis'),
+            dcc.Dropdown(
+                id='crossfilter-xaxis-column',
+                value='EBITDAToEV',
+            ),
+        ])
+    ]), # row 2
     dbc.Row([dbc.Col(
         # MD text area Element for footer
         dcc.Markdown(children=disclaimer)

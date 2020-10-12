@@ -17,7 +17,7 @@ import plotly.express as px
 from __init__ import HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID, logger, ticker_dict, exchange_list
 from app import app, cache, db
 from dash_utils import make_table, replace_str_element_w_dash_component
-from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number
+from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data
 from get_dcf_valuation import get_dcf_df
 
 def handler_data_message(title, exception_obj):
@@ -296,3 +296,62 @@ def dcf_valuation(*args, **kwargs):
         logger.exception(e)
         raise PreventUpdate
         
+@app.callback([ServersideOutput('sector-store', 'data'),
+Output('crossfilter-xaxis-column', 'options'),
+Output('crossfilter-yaxis-column', 'options'),
+Output('select-company', 'options')],
+[Input('select-sector', 'value')],
+)
+def update_sector_analysis(sector_names):
+    if not sector_names:
+        return {}, [], [], []
+    try:
+        sector_dict = {}
+        for s in sector_names:
+            sector_data = get_sector_data(s)
+            for ticker in sector_data:
+                sector_data[ticker]['advanced-stats']['sector'] = s
+            sector_dict.update(sector_data)
+        sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
+        xfilter_options = [{'label': i, 'value': i} for i in list(sector_df.columns) + ['EBITDAToEV', 'EBITDAToRevenueMargin']]
+        company_options = [{'label': c, 'value': c} for c in list(sector_df.companyName)]
+        return sector_dict, xfilter_options, xfilter_options, company_options
+    except Exception as e:
+        logger.exception(e)
+        return {}, [], [], []
+
+@app.callback([Output('sector-distribution', 'figure')],
+[Input('sector-store', 'data'),
+Input('select-company', 'value'),
+Input('sector-ev-filter', 'value'),
+Input('crossfilter-xaxis-column', 'value'),
+Input('crossfilter-yaxis-column', 'value')],
+)
+def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis):
+    if not sector_dict:
+        return [{}]
+    sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
+    if not company_selections:
+        sector_df_filtered = sector_df.query(f"enterpriseValue >= {ev_limits[0]*1e9} \
+                        & enterpriseValue <= {ev_limits[1]*1e9}")
+    else:
+        sector_df_filtered= sector_df.query(f"companyName in {company_selections} \
+                        & enterpriseValue >= {ev_limits[0]*1e9} \
+                        & enterpriseValue <= {ev_limits[1]*1e9}")
+    total_companies = len(sector_df_filtered)
+    if not total_companies:
+        return [{}]
+    else:
+        sector_df_filtered['EBITDAToEV'] = sector_df_filtered['EBITDA'] / sector_df_filtered['enterpriseValue']
+        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV'] * sector_df_filtered['enterpriseValueToRevenue']
+        for col in list(sector_df_filtered.columns):
+            if 'Margin' in col or 'Percent' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
+                sector_df_filtered[col] = sector_df_filtered[col]*100    
+        fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, 
+                        size=sector_df_filtered['enterpriseValue']/1e9, size_max=100,
+                        color='sector', hover_name='companyName', hover_data=[sector_df_filtered.index])
+        fig.update_layout(
+            title=f"Sector Matrix of Valuation for a total of {total_companies} companies, size by Enterprise Value (in billions)",
+            legend_title="Sector"
+        )
+        return [fig]

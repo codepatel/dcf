@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
@@ -5,6 +6,9 @@ from datetime import date
 from time import sleep
 import asyncio
 from aiohttp import ClientSession, ClientResponseError
+from iexfinance.base import _IEXBase
+from dotenv import load_dotenv
+load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
 from __init__ import TIMEOUT_12HR, logger, ticker_dict
@@ -25,8 +29,8 @@ def get_financial_report(ticker):
     findata_keys = ['ais', 'abs', 'acf', 'qis', 'qbs', 'qcf']
 
     loop = asyncio.new_event_loop()
-    # future = asyncio.ensure_future(fetch_async(urls))
-    souped_text_list = loop.run_until_complete(fetch_async(urls))
+    # future = asyncio.ensure_future(fetch_async(urls, format = 'text'))
+    souped_text_list = loop.run_until_complete(fetch_async(urls, format = 'text'))
     loop.close()
     finsoup = {k:souped_text_list[idx] for idx, k in enumerate(findata_keys)}
 
@@ -112,16 +116,69 @@ def get_financial_report(ticker):
 
     return df, lastprice, lastprice_time, report_date_note
 
-async def fetch_async(urls):
+@cache.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
+def get_sector_data(sector='Electronic Technology'):
+    """
+    Get sector data from iexfinance API
+    """
+    try:
+        # ONLY US-listed stocks in NYSE, NASDAQ
+        stocks = [s for s in SectorCollection(sector).fetch() if 'primaryExchange' in s and ''.join(sorted(s['primaryExchange'])).strip() in ['ENSYacceeghkknoortwx', 'AADNQS']]
+        logger.info(f'\t{sector}\tUS-listed:\t{len(stocks)}\tcompanies.')
+        # If we can't see its PE here, we're probably not interested in a stock. Omit it from batch queries.
+        stocks = [s for s in stocks if s['peRatio'] and s['peRatio']>0]
+        logger.info(f'\t{sector}\tPE>0:\t{len(stocks)}\tcompanies.')
+        # IEX doesn't like batch queries for more than 100 symbols at a time.
+        # We need to build our fundamentals info iteratively.
+        batch_idx = 0
+        batch_size = 100
+        adv_stats_api_urls = []
+        resp_dict = {}
+        loop = asyncio.new_event_loop()
+        while batch_idx < len(stocks):
+            symbol_batch = [s['symbol']
+                            for s in stocks[batch_idx:batch_idx+batch_size]]
+            adv_stats_api_urls.append(os.environ.get('IEX_CLOUD_APIURL') 
+                                + 'stock/market/batch?symbols=' + ','.join(symbol_batch) + '&types=advanced-stats&token=' 
+                                + os.environ.get('IEX_TOKEN'))
+            batch_idx += batch_size
+        # limit to 300 companies per sector for getting advanced-stats endpoint, 
+        # TODO: improve this in future
+        for d in loop.run_until_complete(fetch_async(adv_stats_api_urls[:3], format = 'json')):
+            resp_dict.update(d)
+        logger.info(f'\t{sector}\tGot data for:\t{len(resp_dict)}\tcompanies.')
+        loop.close()
+        return resp_dict
+    except Exception as e:
+        logger.exception(e)
+
+# We extend iexfinance a bit to support the sector collection endpoint.
+class SectorCollection(_IEXBase):
+
+    def __init__(self, sector, **kwargs):
+        self.sector = sector
+        self.output_format = 'json'
+        super(SectorCollection, self).__init__(**kwargs)
+
+    @property
+    def url(self):
+        return '/stock/market/collection/sector?collectionName={}'.format(self.sector)
+
+async def fetch_async(urls, format = 'text'):
     tasks = []
     # try to use one client session
     async with ClientSession() as session:
         for url in urls:
+            if format == 'text':
             task = asyncio.ensure_future(get_souped_text(session, url))
+            elif format == 'json':
+                task = asyncio.ensure_future(get_json_resp(session, url))
+            else:
+                raise ValueError('Invalid format for fetching URL: ' + format)
             tasks.append(task)
         # await response outside the for loop
-        souped_text_list = await asyncio.gather(*tasks)
-    return souped_text_list
+        resp_list = await asyncio.gather(*tasks)
+    return resp_list
 
 async def get_souped_text(session, url):
     # sleep(0.1)  # throttle scraping
@@ -135,6 +192,11 @@ async def get_souped_text(session, url):
         logger.error("Timeout")
     except Exception as e:
         logger.exception(e)
+
+async def get_json_resp(session, url):
+    async with session.get(url) as resp:
+        resp = await resp.json()
+    return resp
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})

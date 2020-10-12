@@ -1,8 +1,10 @@
 import unittest
 if __package__:
     from .dcf_unittests import DCFUnitTest
+    from .sector_unittests import SectorUnitTest
 else:
     from dcf_unittests import DCFUnitTest
+    from sector_unittests import SectorUnitTest
 
 def suite():
     '''
@@ -11,6 +13,9 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTests(        
         unittest.TestLoader().loadTestsFromTestCase(DCFUnitTest)
+    )
+    suite.addTests(        
+        unittest.TestLoader().loadTestsFromTestCase(SectorUnitTest)
     )
     return suite
 
