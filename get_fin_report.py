@@ -170,7 +170,7 @@ async def fetch_async(urls, format = 'text'):
     async with ClientSession() as session:
         for url in urls:
             if format == 'text':
-            task = asyncio.ensure_future(get_souped_text(session, url))
+                task = asyncio.ensure_future(get_souped_text(session, url))
             elif format == 'json':
                 task = asyncio.ensure_future(get_json_resp(session, url))
             else:
