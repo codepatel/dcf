@@ -12,20 +12,21 @@
 4. Probability of failure for the firm assumes proceeds in case of bankruptcy are 50 cents on the $ of Present Value.
 
 #### How to setup this App locally ####
-1. `git clone git@github.com:codepatel/dcf.git`
-2. `cd dcf`
-3. `pip3 install -r requirements.txt` or 
-    - If you use a virtual environment such as pipenv: `pipenv run pip install -r requirements.txt`
+1. `>> git clone git@github.com:codepatel/dcf.git`
+2. `>> cd dcf`
+3. `>> pip3 install -r requirements.txt` or 
+    - If you use a virtual environment such as pipenv: `>> pipenv run pip install -r requirements.txt`
 4. [Install Redis Server](https://redis.io/) - an in-memory data structure store, used as a database, cache and message broker.
     - [Brew Install Redis on Mac](https://gist.github.com/tomysmile/1b8a321e7c58499ef9f9441b2faa0aa8)
-    - [For Linux or Windows: Installing Redis From Source](https://realpython.com/python-redis/#installing-redis-from-source)
+    - [For Linux: Installing Redis From Source](https://realpython.com/python-redis/#installing-redis-from-source)
+    - [For Windows - Memurai (a fork of Redis)](https://www.memurai.com/get-memurai)
 5. Create a .env file with following env variables defined:
    ```
     DEBUG = True
     FLASK_ENV = development
     REDIS_URL = redis://localhost:6379
     ```
-6. `python index.py`
+6. `>> python index.py`  
     You can expect to see a command-line output like:
     ```
     Dash is running on http://127.0.0.1:8050/
@@ -35,4 +36,4 @@
     * Debug mode: on
     ```
 7. Point your browser to: http://localhost:8050/apps/dcf/AAPL to get started.
-8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark or share with others or look it up in future.
+8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark and share with others or look it up in the near or distant future.

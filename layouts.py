@@ -43,7 +43,7 @@ dcflayout = html.Div([
         [dcc.Markdown(children='''
             ### Purpose of this web app ###
             ##### To be one of the tools to educate and democratize fundamentals DCF (Discounted Cash Flow) Valuation Analysis of public equity investments #####
-            See footer below for more on [About this DCF Valuation App](https://github.com/codepatel/dcf#readme), Assumptions and Disclaimer.
+            See below for more details, Assumptions and Disclaimer or visit [About this DCF Valuation App](https://codepatel.github.io/dcf/)
             '''
         )],
         ),
@@ -156,7 +156,7 @@ dcflayout = html.Div([
         html.H6('Select Parameter(s) to show trend over the past periods'),
         dcc.Dropdown(
                 id='select-column',
-                value=['ROCE(%)', 'Sales-to-Capital(%)', 'Net Profit Margin(%)'],
+                value=['ROCE(%)', 'Sales-to-Capital(%)', 'Net Profit Margin(%)', 'Revenue Growth(%)'],
                 multi=True
         ),
         dbc.Spinner(dcc.Graph(

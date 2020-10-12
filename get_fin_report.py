@@ -3,15 +3,18 @@ from bs4 import BeautifulSoup
 import requests
 from datetime import date
 from time import sleep
+import asyncio
+from aiohttp import ClientSession, ClientResponseError
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import logger, TIMEOUT_12HR
+from __init__ import TIMEOUT_12HR, logger, ticker_dict
 from app import cache
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 @cache.memoize(timeout=TIMEOUT_12HR)
 def get_financial_report(ticker):
-# try:
+    if ticker not in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
+        raise ValueError("Invalid Ticker entered: " + ticker)
     urlincome = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials'
     urlbalancesheet = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials/balance-sheet'
     urlcashflow = 'https://www.marketwatch.com/investing/stock/'+ticker+'/financials/cash-flow'
@@ -21,7 +24,11 @@ def get_financial_report(ticker):
     urls = [urlincome, urlbalancesheet, urlcashflow, urlqincome, urlqbalancesheet, urlqcashflow]
     findata_keys = ['ais', 'abs', 'acf', 'qis', 'qbs', 'qcf']
 
-    finsoup = {findata_keys[idx]:get_souped_text(u) for idx, u in enumerate(urls)}
+    loop = asyncio.new_event_loop()
+    # future = asyncio.ensure_future(fetch_async(urls))
+    souped_text_list = loop.run_until_complete(fetch_async(urls))
+    loop.close()
+    finsoup = {k:souped_text_list[idx] for idx, k in enumerate(findata_keys)}
 
     # build lists for the Financial statements
     isdata_lines = {'revenue': [], 'eps': [], 'pretaxincome': [], 'netincome': [],
@@ -41,9 +48,12 @@ def get_financial_report(ticker):
 
     #get the data from the fin statement lists and use helper function get_element to index for format line#
     revenue = get_element(isdata_lines['revenue'],0) + get_element(isdata_lines['revenue'],2)
-    if isdata_lines['revenue'][1][0] != '-':    # for Financial companies top-line
-        non_interest_income = get_element(isdata_lines['revenue'],1) + get_element(isdata_lines['revenue'],3)
-        revenue = [get_string_from_number(get_number_from_string(revenue[y])+get_number_from_string(nii)) for y, nii in enumerate(non_interest_income)]
+    revenueGrowth = get_element(isdata_lines['revenue'],1) + get_element(isdata_lines['revenue'],3)
+    if len(isdata_lines['revenue']) == 10:    # for Financial companies top-line, add Interest and non-Interest Income
+        net_interest_income_after_provision = get_element(isdata_lines['revenue'],2) + get_element(isdata_lines['revenue'],7)
+        non_interest_income = get_element(isdata_lines['revenue'],4) + get_element(isdata_lines['revenue'],9)
+        revenue = [get_string_from_number(get_number_from_string(net_interest_income_after_provision[y])+get_number_from_string(nii)) for y, nii in enumerate(non_interest_income)]
+        revenueGrowth = get_element(isdata_lines['revenue'],3) + get_element(isdata_lines['revenue'],8)
     eps = get_element(isdata_lines['eps'],0) + get_element(isdata_lines['eps'],2)
     epsGrowth = get_element(isdata_lines['eps'],1) + get_element(isdata_lines['eps'],3)
     preTaxIncome = get_element(isdata_lines['pretaxincome'],0) + get_element(isdata_lines['pretaxincome'],2)
@@ -75,7 +85,7 @@ def get_financial_report(ticker):
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
-    df= pd.DataFrame({'Revenue($)': revenue, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
+    df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
             'Pretax Income($)': preTaxIncome, 'Net Income($)': netIncome, 'Interest Expense($)': interestExpense,
             'EBITDA($)': ebitda, 'Research & Development($)': resanddev, 'Shares Outstanding': outstanding_shares, 
             'Longterm Debt($)': longtermDebt, 'Shareholder Equity($)': shareholderEquity,
@@ -84,6 +94,7 @@ def get_financial_report(ticker):
             'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(date.today().year-5,date.today().year+1))
     df.reset_index(inplace=True)
+    # Derived Financial Metrics/Ratios
     df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)
     df['Capital Employed($)'] = df['Total Assets($)'].apply(get_number_from_string) - df['Total Current Liabilities($)'].apply(get_number_from_string)
     df['Sales-to-Capital(%)'] = (df['Revenue($)'].apply(get_number_from_string) / df['Capital Employed($)']).apply(get_string_from_number)
@@ -101,9 +112,29 @@ def get_financial_report(ticker):
 
     return df, lastprice, lastprice_time, report_date_note
 
-def get_souped_text(url):
-    sleep(0.1)  # throttle scraping
-    return BeautifulSoup(requests.get(url).text, features="html.parser") #read in
+async def fetch_async(urls):
+    tasks = []
+    # try to use one client session
+    async with ClientSession() as session:
+        for url in urls:
+            task = asyncio.ensure_future(get_souped_text(session, url))
+            tasks.append(task)
+        # await response outside the for loop
+        souped_text_list = await asyncio.gather(*tasks)
+    return souped_text_list
+
+async def get_souped_text(session, url):
+    # sleep(0.1)  # throttle scraping
+    try:
+        async with session.get(url, timeout=15) as response:
+            resp = await response.read()
+        return BeautifulSoup(resp.decode('utf-8'), features="html.parser")  # read in
+    except ClientResponseError as e:
+        logger.error(e.code)
+    except asyncio.TimeoutError:
+        logger.error("Timeout")
+    except Exception as e:
+        logger.exception(e)
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})
@@ -114,7 +145,7 @@ def walk_row(titlerow):
 def get_income_data(data_titles, data_lines):
     def build_income_list(data_list):
         if 'Sales' in title.text \
-                or 'Net Interest Income after Provision' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
+                or 'Net Interest Inc' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
         if 'EPS (Basic)' in title.text:
             data_lines['eps'].append(data_list)
@@ -238,5 +269,10 @@ def get_yahoo_fin_values(ticker):
 
 # %%
 if __name__ == '__main__':
-    # df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
-    pass
+    import cProfile
+    import pstats
+    pr = cProfile.Profile()
+    pr.enable()
+    df, lastprice, lastprice_time, report_date_note = get_financial_report('AAPL')
+    pr.disable()
+    pstats.Stats(pr).strip_dirs().sort_stats('time').print_stats(0.05)  # Profile only Top 5% time spent
