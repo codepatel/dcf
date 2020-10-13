@@ -346,9 +346,11 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
         sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered['enterpriseValueToRevenue']
         for col in list(sector_df_filtered.columns):
             if 'Margin' in col or 'Percent' in col or '%' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
-                sector_df_filtered[col] = sector_df_filtered[col]*100    
-        fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, 
-                        size=sector_df_filtered['enterpriseValue']/1e9, size_max=100, 
+                sector_df_filtered[col] = sector_df_filtered[col]*100
+        x_limits = [-5, min([sector_df_filtered[xaxis].max(), 40])+5] if xaxis == 'EBITDAToEV(%)' else None
+        y_limits = [-5, min([sector_df_filtered[yaxis].max(), 75])+5] if yaxis == 'EBITDAToRevenueMargin' else None
+        fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, range_x=x_limits, range_y=y_limits,
+                        size=sector_df_filtered['enterpriseValue']/1e9, size_max=50, 
                         labels={'size': 'Enterprise Value (billions)', 'index': 'ticker', 'hover_data_1': 'Market Cap (billions)'},
                         color='sector', hover_name='companyName', 
                         hover_data=[sector_df_filtered.index, sector_df_filtered.marketcap/1e9])

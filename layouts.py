@@ -247,7 +247,7 @@ sectorlayout = html.Div([
                        "Communications",
                        "Energy Minerals",
                        "Government"]],
-                value=["Electronic Technology"],
+                value=["Electronic Technology", "Health Technology", "Technology Services"],
                 multi=True
         ),
         
@@ -266,7 +266,7 @@ sectorlayout = html.Div([
             dbc.Label("Filter by Enterprise Value (in billions)", html_for="sector-ev-filter"),
             dcc.RangeSlider(id="sector-ev-filter", min=0.01, max=10e3, step=0.01, value=[0.1, 3e3], 
             tooltip={'always_visible': True, 'placement': 'topRight'},
-            # marks={i: str(10 ** i) for i in range(-2,4)},
+            marks={(10 ** i): str(10 ** i)+'B' for i in [-2,3,4]},
             updatemode='drag',
             ),
             html.H5('Crossfilter-Yaxis'),
