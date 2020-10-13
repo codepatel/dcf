@@ -313,7 +313,7 @@ def update_sector_analysis(sector_names):
                 sector_data[ticker]['advanced-stats']['sector'] = s
             sector_dict.update(sector_data)
         sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
-        xfilter_options = [{'label': i, 'value': i} for i in list(sector_df.columns) + ['EBITDAToEV', 'EBITDAToRevenueMargin']]
+        xfilter_options = [{'label': i, 'value': i} for i in list(sector_df.columns) + ['EBITDAToEV(%)', 'EBITDAToRevenueMargin']]
         company_options = [{'label': c, 'value': c} for c in list(sector_df.companyName)]
         return sector_dict, xfilter_options, xfilter_options, company_options
     except Exception as e:
@@ -342,16 +342,18 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
     if not total_companies:
         return [{}]
     else:
-        sector_df_filtered['EBITDAToEV'] = sector_df_filtered['EBITDA'] / sector_df_filtered['enterpriseValue']
-        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV'] * sector_df_filtered['enterpriseValueToRevenue']
+        sector_df_filtered['EBITDAToEV(%)'] = sector_df_filtered['EBITDA'] / sector_df_filtered['enterpriseValue']
+        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered['enterpriseValueToRevenue']
         for col in list(sector_df_filtered.columns):
-            if 'Margin' in col or 'Percent' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
+            if 'Margin' in col or 'Percent' in col or '%' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
                 sector_df_filtered[col] = sector_df_filtered[col]*100    
         fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, 
-                        size=sector_df_filtered['enterpriseValue']/1e9, size_max=100,
-                        color='sector', hover_name='companyName', hover_data=[sector_df_filtered.index])
+                        size=sector_df_filtered['enterpriseValue']/1e9, size_max=100, 
+                        labels={'size': 'Enterprise Value (billions)', 'index': 'ticker', 'hover_data_1': 'Market Cap (billions)'},
+                        color='sector', hover_name='companyName', 
+                        hover_data=[sector_df_filtered.index, sector_df_filtered.marketcap/1e9])
         fig.update_layout(
-            title=f"Sector Matrix of Valuation for a total of {total_companies} companies, size by Enterprise Value (in billions)",
+            title=f"Sector Matrix of Valuation for a total of {total_companies} companies, with total Market Cap of {sector_df_filtered.marketcap.sum()/1e12:.3f} trillion, size by Enterprise Value (in billions)",
             legend_title="Sector"
         )
         return [fig]

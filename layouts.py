@@ -281,7 +281,7 @@ sectorlayout = html.Div([
             html.H5('Crossfilter-Xaxis'),
             dcc.Dropdown(
                 id='crossfilter-xaxis-column',
-                value='EBITDAToEV',
+                value='EBITDAToEV(%)',
             ),
         ])
     ]), # row 2
