@@ -1,5 +1,5 @@
 aiohttp>=3.6.2
-aiosseclient>=0.0.1
+git+https://github.com/ebraminio/aiosseclient.git#egg=aiosseclient
 beautifulsoup4>=4.9.1
 Brotli>=1.0.9
 certifi>=2020.6.20
