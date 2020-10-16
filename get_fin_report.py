@@ -1,18 +1,20 @@
 import os
+from datetime import date
+from time import sleep
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
-from datetime import date
-from time import sleep
 import asyncio
+import json
 from aiohttp import ClientSession, ClientResponseError
+from aiosseclient import aiosseclient
 from iexfinance.base import _IEXBase
 from dotenv import load_dotenv
 load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
 from __init__ import TIMEOUT_12HR, logger, ticker_dict
-from app import cache
+from app import cache, cache_redis
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 @cache.memoize(timeout=TIMEOUT_12HR)
@@ -28,10 +30,12 @@ def get_financial_report(ticker):
     urls = [urlincome, urlbalancesheet, urlcashflow, urlqincome, urlqbalancesheet, urlqcashflow]
     findata_keys = ['ais', 'abs', 'acf', 'qis', 'qbs', 'qcf']
 
-    loop = asyncio.new_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
     # future = asyncio.ensure_future(fetch_async(urls, format = 'text'))
     souped_text_list = loop.run_until_complete(fetch_async(urls, format = 'text'))
-    loop.close()
     finsoup = {k:souped_text_list[idx] for idx, k in enumerate(findata_keys)}
 
     # build lists for the Financial statements
@@ -116,8 +120,8 @@ def get_financial_report(ticker):
 
     return df, lastprice, lastprice_time, report_date_note
 
-@cache.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
-def get_sector_data(sector='Electronic Technology'):
+@cache_redis.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
+def get_sector_data(sector):
     """
     Get sector data from iexfinance API
     """
@@ -134,7 +138,10 @@ def get_sector_data(sector='Electronic Technology'):
         batch_size = 100
         adv_stats_api_urls = []
         resp_dict = {}
-        loop = asyncio.new_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
         while batch_idx < len(stocks):
             symbol_batch = [s['symbol']
                             for s in stocks[batch_idx:batch_idx+batch_size]]
@@ -147,7 +154,6 @@ def get_sector_data(sector='Electronic Technology'):
         for d in loop.run_until_complete(fetch_async(adv_stats_api_urls[:3], format = 'json')):
             resp_dict.update(d)
         logger.info(f'\t{sector}\tGot data for:\t{len(resp_dict)}\tcompanies.')
-        loop.close()
         return resp_dict
     except Exception as e:
         logger.exception(e)
@@ -197,6 +203,10 @@ async def get_json_resp(session, url):
     async with session.get(url) as resp:
         resp = await resp.json()
     return resp
+
+async def get_stream_quote(ticker):
+    async for event in aiosseclient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}"):
+        return event
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})
@@ -327,7 +337,6 @@ def get_yahoo_fin_values(ticker):
     except Exception as e:
         logger.exception(e)
         return 'N/A', []
-
 
 # %%
 if __name__ == '__main__':

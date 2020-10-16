@@ -25,7 +25,13 @@
     DEBUG = True
     FLASK_ENV = development
     REDIS_URL = redis://localhost:6379
+    # IEX env settings: Use one of the two options below for TEST (Scrambled data) or LIVE (Real data)
+    IEX_API_VERSION = iexcloud-sandbox or iexcloud-v1
+    IEX_CLOUD_APIURL = https://sandbox.iexapis.com/stable/ or https://cloud.iexapis.com/stable/
+    IEX_TOKEN = <Your TEST-SANDBOX or LIVE-CLOUD Public API Token>
+    IEX_CLOUD_APISSEURL = https://sandbox-sse.iexapis.com/stable/ or https://cloud-sse.iexapis.com/stable/
     ```
+    *Note: If you don't have an IEX Account, get started now with a Free Account by clicking this referral link:* [IEX Cloud is the easiest way to use financial data!](https://iexcloud.io/s/b47b5006)
 6. `>> python index.py`  
     You can expect to see a command-line output like:
     ```

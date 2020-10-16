@@ -1,5 +1,5 @@
 from pathlib import Path
-from time import sleep
+import time
 import json
 import traceback
 import uuid
@@ -12,12 +12,13 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 # import plotly.graph_objs as go
 import plotly.express as px
+import asyncio
 # from iexfinance.stocks import Stock
 # Local imports
 from __init__ import HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID, logger, ticker_dict, exchange_list
 from app import app, cache, db
 from dash_utils import make_table, replace_str_element_w_dash_component
-from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data
+from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data, get_stream_quote
 from get_dcf_valuation import get_dcf_df
 
 def handler_data_message(title, exception_obj):
@@ -81,8 +82,9 @@ Output('supp-info', 'children')],
 Input('handler-ticker-valid', 'data'),
 Input('handler-past-data', 'data'),
 Input('handler-dcf-data', 'data'),
+Input('lastpricestream-data', 'data'),
 Input('status-info', 'loading_state')])
-def refresh_for_update(handler_parseURL, handler_ticker, handler_past, handler_dcf, status_loading_dict):
+def refresh_for_update(handler_parseURL, handler_ticker, handler_past, handler_dcf, lastprice_dict, status_loading_dict):
     ctx = dash.callback_context
     if not ctx.triggered:
         return tuple(["Enter Ticker to continue"] * 2)
@@ -97,13 +99,13 @@ def refresh_for_update(handler_parseURL, handler_ticker, handler_past, handler_d
         for d in update_data:
             if d:
                 status = d[0]['status-info']   # always 1 element is sent by handler, so use 0
-                status_msg.append(status)
+                status_msg += status
                 supp = d[0]['supp-data']
                 if isinstance(supp, str):
                     supp_msg.extend(replace_str_element_w_dash_component(supp, repl_dash_component=[]))
-                else:   # it is a dcc or html component, get children
+                elif supp:   # it is a dcc or html component, get children
                     supp_msg.extend(replace_str_element_w_dash_component(supp['props']['children']))
-        return status_msg, supp_msg
+        return status_msg, supp_msg or dash.no_update
 
 @app.callback([Output("ticker-input", "valid"), 
 Output("ticker-input", "invalid"),
@@ -117,7 +119,7 @@ def check_ticker_validity(ticker):
         ticker_allcaps = ticker.upper()
         if ticker_allcaps in ticker_dict():  # Validate with https://sandbox.iexapis.com/stable/ref-data/symbols?token=
             is_valid_ticker = True
-            return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_dict()[ticker_allcaps], [{'status-info': 'Last Price ', 
+            return is_valid_ticker, not is_valid_ticker, 'Getting financial data... for: ' + ticker_dict()[ticker_allcaps], [{'status-info': 'Market Price used in Calculation: ', 
                                                                                                                 'supp-data': ''}]
         else:
             raise ValueError("Invalid Ticker entered: " + ticker + '\nValid Tickers from listed Exchanges:\n' + '\n'.join(exchange_list()))
@@ -173,7 +175,7 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
             f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
             f"Beta: {stats_record['beta']},\n" \
             f"Next Earnings date: {stats_record['next_earnings_date']},\n"
-        handler_data = {'status-info': f"{stats_record['lastprice']} @ {stats_record['lastprice_time']}", 
+        handler_data = {'status-info': f"{stats_record['lastprice']}", 
                         'supp-data': supp_data_notes}
         return df_dict, select_column_options, {'is_loading': False}, [handler_data]
         # 'records' is more "compatible" than 'series'
@@ -313,7 +315,7 @@ def update_sector_analysis(sector_names):
                 sector_data[ticker]['advanced-stats']['sector'] = s
             sector_dict.update(sector_data)
         sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
-        xfilter_options = [{'label': i, 'value': i} for i in list(sector_df.columns) + ['EBITDAToEV(%)', 'EBITDAToRevenueMargin']]
+        xfilter_options = [{'label': i, 'value': i} for i in list(sector_df.columns) + ['EBITDAToEV(%)', 'EBITDAToRevenueMargin', 'TotalAssets', 'EBITDAToAssets(%)']]
         company_options = [{'label': c, 'value': c} for c in list(sector_df.companyName)]
         return sector_dict, xfilter_options, xfilter_options, company_options
     except Exception as e:
@@ -332,23 +334,27 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
         return [{}]
     sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
     if not company_selections:
-        sector_df_filtered = sector_df.query(f"enterpriseValue >= {ev_limits[0]*1e9} \
-                        & enterpriseValue <= {ev_limits[1]*1e9}")
+        sector_df_filtered = sector_df.query(f"enterpriseValue >= {10 ** ev_limits[0]} \
+                        & enterpriseValue <= {10 ** ev_limits[1]}")
     else:
         sector_df_filtered= sector_df.query(f"companyName in {company_selections} \
-                        & enterpriseValue >= {ev_limits[0]*1e9} \
-                        & enterpriseValue <= {ev_limits[1]*1e9}")
+                        & enterpriseValue >= {10 ** ev_limits[0]} \
+                        & enterpriseValue <= {10 ** ev_limits[1]}")
     total_companies = len(sector_df_filtered)
     if not total_companies:
         return [{}]
     else:
-        sector_df_filtered['EBITDAToEV(%)'] = sector_df_filtered['EBITDA'] / sector_df_filtered['enterpriseValue']
-        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered['enterpriseValueToRevenue']
+        sector_df_filtered['EBITDAToEV(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.enterpriseValue
+        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered.enterpriseValueToRevenue
+        sector_df_filtered['TotalAssets'] = (sector_df_filtered.marketcap / sector_df_filtered.priceToBook) * (1 + sector_df_filtered.debtToEquity) + sector_df_filtered.currentDebt
+        # Alternate Debt + Equity: (sector_df_filtered.enterpriseValue - sector_df_filtered.marketcap + sector_df_filtered.totalCash) * (1 + 1/sector_df_filtered.debtToEquity)
+        sector_df_filtered['EBITDAToAssets(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.TotalAssets
+
         for col in list(sector_df_filtered.columns):
             if 'Margin' in col or 'Percent' in col or '%' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
                 sector_df_filtered[col] = sector_df_filtered[col]*100
         x_limits = [-5, min([sector_df_filtered[xaxis].max(), 40])+5] if xaxis == 'EBITDAToEV(%)' else None
-        y_limits = [-5, min([sector_df_filtered[yaxis].max(), 75])+5] if yaxis == 'EBITDAToRevenueMargin' else None
+        y_limits = [-5, min([sector_df_filtered[yaxis].max(), 80])+5] if yaxis in ['EBITDAToRevenueMargin', 'EBITDAToAssets(%)'] else None
         fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, range_x=x_limits, range_y=y_limits,
                         size=sector_df_filtered['enterpriseValue']/1e9, size_max=50, 
                         labels={'size': 'Enterprise Value (billions)', 'index': 'ticker', 'hover_data_1': 'Market Cap (billions)'},
@@ -359,3 +365,20 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
             legend_title="Sector"
         )
         return [fig]
+
+@app.callback(Output('lastpricestream-data', 'data'),
+[Input('ticker-input', 'valid'),
+Input('price-update-interval', 'n_intervals')],
+[State('ticker-input', 'value')])
+def update_price_stream(ticker_valid, update_interval, ticker):
+    if not ticker_valid:
+        return [{}]
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    push_msgs = json.loads(loop.run_until_complete(get_stream_quote(ticker)).data)
+    lastprice = push_msgs[-1]['lastSalePrice']
+    lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msgs[-1]['lastSaleTime']/1000))
+    return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
+            'supp-data': []}]

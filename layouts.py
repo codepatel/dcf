@@ -1,3 +1,4 @@
+from math import log10
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -84,6 +85,12 @@ dcflayout = html.Div([
             dcc.Store(id="handler-ticker-valid"),
             dcc.Store(id="handler-past-data"), 
             dcc.Store(id="handler-dcf-data"),
+            dcc.Store(id='lastpricestream-data'),
+            dcc.Interval(
+                id='price-update-interval',
+                interval=15*1000, # in milliseconds
+                n_intervals=0
+            )
             ]))
         ]),
         dbc.Col([
@@ -223,7 +230,7 @@ sectorlayout = html.Div([
     # Element for Graph plot of Sector Picks
     dbc.Row([
         dbc.Col([html.Div([
-        html.H5('Select Sector: '),
+        html.H5('Select Sector(s): '),
         dcc.Dropdown(
                 id='select-sector',
                 options=[{'label': i, 'value': i} for i in ["Electronic Technology",
@@ -264,9 +271,8 @@ sectorlayout = html.Div([
                 placeholder='Filter to one or more companies, start typing in dropdown'
             ),
             dbc.Label("Filter by Enterprise Value (in billions)", html_for="sector-ev-filter"),
-            dcc.RangeSlider(id="sector-ev-filter", min=0.01, max=10e3, step=0.01, value=[0.1, 3e3], 
-            tooltip={'always_visible': True, 'placement': 'topRight'},
-            marks={(10 ** i): str(10 ** i)+'B' for i in [-2,3,4]},
+            dcc.RangeSlider(id="sector-ev-filter", min=7, max=13, step=0.001, value=[8, 12.699], 
+            marks={i: str(10 ** (i-9))+'B' for i in range(7, 14)},
             updatemode='drag',
             ),
             html.H5('Crossfilter-Yaxis'),
@@ -276,6 +282,7 @@ sectorlayout = html.Div([
             ),
         ], width=3),
         dbc.Col([
+            dbc.NavLink('Data provided by IEX Cloud', href="https://iexcloud.io"),
             dbc.Spinner(dcc.Graph(id='sector-distribution'
             )),
             html.H5('Crossfilter-Xaxis'),

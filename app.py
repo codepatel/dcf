@@ -30,9 +30,12 @@ app.config.suppress_callback_exceptions = True
 cache = Cache(app.server, config={
     'CACHE_TYPE': 'filesystem',
     'CACHE_DIR': 'app',
-    # 'CACHE_TYPE': 'redis',
-    # 'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379'),
     'CACHE_THRESHOLD': 1000
+})
+
+cache_redis = Cache(app.server, config={
+    'CACHE_TYPE': 'redis',
+    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379'),
 })
 
 db = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))
