@@ -84,13 +84,9 @@ def get_financial_report(ticker):
     if all([c == '-' for c in currentLiabilities]):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
-
-    if cfdata_lines['capex'][1][0] != '-':
-        capEx_ttm = get_element(cfdata_lines['capex'],1)
-    else:
-        capEx_ttm = get_element(cfdata_lines['capex'],3) if '-' not in get_element(cfdata_lines['capex'],3) else get_element(cfdata_lines['capex'],2)
-    capEx = get_element(cfdata_lines['capex'],0) + capEx_ttm
-    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
+    
+    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],1)
+    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],1)
     
     # load all the data into dataframe 
     df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
@@ -247,7 +243,7 @@ def get_income_data(data_titles, data_lines):
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
         if 'EPS (Basic)' in title.text: # don't scale to 'M' or '%' for pershare
             qtr_sum = f'{sum(qtr_data[1:]):.2f}' if all(v is not None for v in qtr_data) else '-' # use last 4 qtrs for TTM data
-        elif 'Basic Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
+        elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
             qtr_sum = get_string_from_number(qtr_data[-1])
         else:
             qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data) else '-' # use last 4 qtrs for TTM data
@@ -279,9 +275,9 @@ def get_balancesheet_data(data_titles, data_lines):
     
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
-        if 'Net Investing Cash Flow' in title.text:
+        if ' Net Investing Cash Flow' in title.text:
             data_lines['capex'].append(data_list)
-        if 'Free Cash Flow' in title.text:
+        if ' Free Cash Flow' in title.text:
             data_lines['fcf'].append(data_list)
 
     for title in data_titles['acf']:
