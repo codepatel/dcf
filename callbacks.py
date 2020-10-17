@@ -378,10 +378,12 @@ def update_price_stream(stream_data_dict, update_interval):
     ticker = stream_data_dict['tops_quote']
     try:
         push_msgs = json.loads(loop.run_until_complete(get_stream_quote(ticker)).data)
+        if not push_msgs:
+            raise FileNotFoundError('503: SSE stream has no data. Please come back later!')
         lastprice = push_msgs[-1]['lastSalePrice']
         lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msgs[-1]['lastSaleTime']/1000))
         return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
                 'supp-data': []}]
     except Exception as e:
         logger.exception(e)
-        return dash.no_update
+        return [{'status-info': [html.Br(), str(e)], 'supp-data': []}]

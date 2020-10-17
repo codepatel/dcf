@@ -9,7 +9,7 @@ import redis
 from dotenv import load_dotenv
 load_dotenv()
 
-console_handler = logging.StreamHandler('ext://flask.logging.wsgi_errors_stream')
+console_handler = logging.StreamHandler(flask.logging.wsgi_errors_stream)
 console_handler.setLevel(logging.ERROR)
 logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] in %(module)s: %(message)s',
                 datefmt='%Y-%m-%d_%I:%M:%S_%p',

@@ -206,6 +206,7 @@ async def get_stream_quote(ticker):
         ) as event_source:
         try:
             async for event in event_source:
+                logger.info(event)
                 return event
         except ConnectionError as e:
             logger.exception(e) 
