@@ -1,5 +1,5 @@
 aiohttp>=3.6.2
-git+https://github.com/ebraminio/aiosseclient.git#egg=aiosseclient
+aiohttp-sse-client>=0.1.7
 beautifulsoup4>=4.9.1
 Brotli>=1.0.9
 certifi>=2020.6.20
@@ -18,7 +18,7 @@ Flask-Compress>=1.5.0
 future>=0.18.2
 gunicorn>=20.0.4
 idna>=2.10
-iexfinance
+git+https://github.com/addisonlynch/iexfinance.git#egg=iexfinance
 itsdangerous>=1.1.0
 Jinja2>=2.11.2
 MarkupSafe>=1.1.1

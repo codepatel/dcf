@@ -81,11 +81,12 @@ dcflayout = html.Div([
         make_card('Supplemental Info', 'success', dbc.Spinner([html.P(id='supp-info'),
             dcc.Store(id='fin-store'),
             dcc.Store(id='dcf-store'),
+            dcc.Store(id='lastpricestream-data'),
             dcc.Store(id="handler-parseURL"),
             dcc.Store(id="handler-ticker-valid"),
             dcc.Store(id="handler-past-data"), 
-            dcc.Store(id="handler-dcf-data"),
-            dcc.Store(id='lastpricestream-data'),
+            dcc.Store(id="handler-dcf-data"),            
+            dcc.Store(id='handler-lastpricestream'),
             dcc.Interval(
                 id='price-update-interval',
                 interval=15*1000, # in milliseconds
@@ -144,7 +145,7 @@ dcflayout = html.Div([
             dcc.Slider(id="terminal-growth-rate", min=0, max=5, step=0.25, value=3.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 6)}, disabled=False),
-            dbc.Label("Cost of Capital (%) (select range: 0 to 15)", html_for="cost-of-cap"),
+            dbc.Label("Cost of Capital / Discount Rate (%) (select range: 0 to 15)", html_for="cost-of-cap"),
             dcc.Slider(id="cost-of-cap", min=0, max=15, step=0.25, value=8.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 16)}),

@@ -7,14 +7,14 @@ import requests
 import asyncio
 import json
 from aiohttp import ClientSession, ClientResponseError
-from aiosseclient import aiosseclient
+from aiohttp_sse_client import client as sse_client
 from iexfinance.base import _IEXBase
 from dotenv import load_dotenv
 load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import TIMEOUT_12HR, logger, ticker_dict
-from app import cache, cache_redis
+from __init__ import TIMEOUT_12HR, ticker_dict
+from app import cache, cache_redis, logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 @cache.memoize(timeout=TIMEOUT_12HR)
@@ -205,8 +205,14 @@ async def get_json_resp(session, url):
     return resp
 
 async def get_stream_quote(ticker):
-    async for event in aiosseclient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}"):
-        return event
+    async with sse_client.EventSource(
+        f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}"
+        ) as event_source:
+        try:
+            async for event in event_source:
+                return event
+        except ConnectionError as e:
+            logger.exception(e) 
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})

@@ -6,8 +6,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 # Local imports
-from __init__ import logger
-from app import app, db
+from app import app, db, logger
 from get_fin_report import get_number_from_string
 
 def get_dcf_current_year_input_overrides():

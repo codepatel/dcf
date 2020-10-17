@@ -1,4 +1,5 @@
 import os
+import logging
 import flask
 from flask_caching import Cache
 import dash
@@ -8,12 +9,22 @@ import redis
 from dotenv import load_dotenv
 load_dotenv()
 
+console_handler = logging.StreamHandler('ext://flask.logging.wsgi_errors_stream')
+console_handler.setLevel(logging.ERROR)
+logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] in %(module)s: %(message)s',
+                datefmt='%Y-%m-%d_%I:%M:%S_%p',
+                level=logging.INFO,
+                handlers=[console_handler,
+                    logging.FileHandler(os.path.expandvars('./app/app_DCFoutput.log'), mode='w')
+                ])
+
 #instantiate dash app server using flask for easier hosting
 server = flask.Flask(__name__)
 app = dash.Dash(__name__, server = server, 
     meta_tags=[{ "content": "width=device-width"}], 
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     )
+logger = app.logger # use Flask's app.logger with above added handlers in basicConfig
 
 # fs = FileSystemStore(cache_dir="tmp")
 # sot = ServersideOutputTransform(backend=fs)
@@ -24,7 +35,7 @@ app = dash.Dash(__name__, server = server,
 #     )
 
 app.title = 'Equity Valuation Analysis'
-#used for dynamic callbacks
+# used for dynamic callbacks
 app.config.suppress_callback_exceptions = True
 
 cache = Cache(app.server, config={
