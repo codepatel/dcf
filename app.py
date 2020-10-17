@@ -15,7 +15,7 @@ logging.basicConfig(format='%(asctime)s: [%(levelname)-8s] in %(module)s: %(mess
                 datefmt='%Y-%m-%d_%I:%M:%S_%p',
                 level=logging.INFO,
                 handlers=[console_handler,
-                    logging.FileHandler(os.path.expandvars('./app/app_DCFoutput.log'), mode='w')
+                    logging.FileHandler(os.path.expandvars('./app_DCFoutput.log'), mode='w')
                 ])
 
 #instantiate dash app server using flask for easier hosting
