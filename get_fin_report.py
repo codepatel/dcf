@@ -7,8 +7,7 @@ import requests
 import asyncio
 import json
 from aiohttp import ClientSession, ClientResponseError
-from aiohttp_sse_client import client as sse_client
-from sseclient import SSEClient
+# from aiohttp_sse_client import client as sse_client
 from iexfinance.base import _IEXBase
 from dotenv import load_dotenv
 load_dotenv()
@@ -210,15 +209,7 @@ async def get_json_resp(session, url):
 #                 logger.info(event)
 #                 return event
 #         except ConnectionError as e:
-#             logger.exception(e) 
-
-def get_stream_quote(ticker):
-    try:
-        for msg in SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=5):
-            return json.loads(msg.data)
-    except (ConnectionError, requests.exceptions.ReadTimeout) as e:
-        # logger.exception(e)
-        return []
+#             logger.exception(e)
 
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})

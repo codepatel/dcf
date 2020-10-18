@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import time
 import json
@@ -12,13 +13,15 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 # import plotly.graph_objs as go
 import plotly.express as px
+import requests
 import asyncio
+from sseclient import SSEClient
 # from iexfinance.stocks import Stock
 # Local imports
 from __init__ import HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID, ticker_dict, exchange_list
 from app import app, cache, db, logger
 from dash_utils import make_table, replace_str_element_w_dash_component
-from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data, get_stream_quote
+from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data
 from get_dcf_valuation import get_dcf_df
 
 def handler_data_message(title, exception_obj):
@@ -137,7 +140,6 @@ def check_ticker_validity(ticker):
 @app.callback([ServersideOutput('fin-store', 'data'),
 Output('select-column', 'options'),
 Output('status-info', 'loading_state'),
-Output('lastpricestream-data', 'data'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
 [State('ticker-input', 'value'),
@@ -145,7 +147,7 @@ State('analysis-mode', 'value'),
 State('snapshot-uuid', 'value')])
 def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid): 
     if not ticker_valid:
-        return [], [], {'is_loading': True}, {}, dash.no_update
+        return [], [], {'is_loading': True}, dash.no_update
     try:
         ticker_allcaps = ticker.upper()
         db_key = ticker_allcaps+'-'+snapshot_uuid
@@ -179,12 +181,11 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
         handler_data = {'status-info': f"{stats_record['lastprice']}", 
                         'supp-data': supp_data_notes}
         
-        return df_dict, select_column_options, {'is_loading': False}, {'tops_quote': ticker_allcaps}, [handler_data]
-        # 'records' is more "compatible" than 'series'
-        
+        return df_dict, select_column_options, {'is_loading': False}, [handler_data]
+        # 'records' is more "compatible" than 'series'        
     except Exception as e:       
         logger.exception(e)
-        return [], [], {'is_loading': False}, {}, handler_data_message('See Error Message(s) below:', traceback.format_exc())
+        return [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', traceback.format_exc())
 
 @app.callback(Output('fin-table', 'children'),
 Input('fin-store', 'data'),
@@ -368,20 +369,23 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
         return [fig]
 
 @app.callback(Output('handler-lastpricestream', 'data'),
-[Input('lastpricestream-data', 'data'),
-Input('price-update-interval', 'n_intervals')])
-def update_price_stream(stream_data_dict, update_interval):
+[Input('fin-store', 'data'),
+Input('price-update-interval', 'n_intervals')])     # for polling of SSE TOPS stream: dcc.Store(id='topsstream-data')
+def update_price_stream(df_dict, update_interval):
     # try:
     #     loop = asyncio.get_event_loop()
     # except RuntimeError:
     #     loop = asyncio.new_event_loop()
-    ticker = stream_data_dict['tops_quote']
     try:
-        push_msgs = get_stream_quote(ticker)
-        if not push_msgs:
-            raise TimeoutError('Last Price Quote had Error 503: SSE stream has no data. Please come back later!')
-        lastprice = push_msgs[-1]['lastSalePrice']
-        lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msgs[-1]['lastSaleTime']/1000))
+        ticker = list(df_dict.keys())[0]
+        try:
+            stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=5)
+            # stream_data_generator = SSEClient('https://stream.wikimedia.org/v2/stream/recentchange', timeout=3)
+        except requests.exceptions.ReadTimeout as e:
+            return [{'status-info': [html.Br(), 'Last Price Quote had Error 503: SSE stream has no data. Please come back later!'], 'supp-data': []}]
+        push_msg = json.loads(next(stream_data_generator).data)
+        lastprice = push_msg['lastSalePrice']
+        lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msg['lastSaleTime']/1000))
         return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
                 'supp-data': []}]
     except Exception as e:
