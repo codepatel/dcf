@@ -231,7 +231,7 @@ def get_income_data(data_titles, data_lines):
         if 'Sales' in title.text \
                 or 'Net Interest Inc' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
-        if 'EPS (Basic)' in title.text:
+        if 'EPS (Diluted)' in title.text:
             data_lines['eps'].append(data_list)
         if 'Pretax Income' in title.text:
             data_lines['pretaxincome'].append(data_list)
@@ -243,7 +243,7 @@ def get_income_data(data_titles, data_lines):
             data_lines['randd'].append(data_list)
         if 'EBITDA' in title.text:
             data_lines['ebitda'].append(data_list)
-        if 'Basic Shares Outstanding' in title.text:
+        if 'Diluted Shares Outstanding' in title.text:
             data_lines['shares'].append(data_list)
     
     for title in data_titles['ais']:
@@ -251,7 +251,7 @@ def get_income_data(data_titles, data_lines):
 
     for title in data_titles['qis']:    # first convert to numbers, then sum
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        if 'EPS (Basic)' in title.text: # don't scale to 'M' or '%' for pershare
+        if 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
             qtr_sum = f'{sum(qtr_data[1:]):.2f}' if all(v is not None for v in qtr_data) else '-' # use last 4 qtrs for TTM data
         elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
             qtr_sum = get_string_from_number(qtr_data[-1])
