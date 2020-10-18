@@ -262,6 +262,8 @@ Output('year0-randd', 'value'),
 Output('year0-capex', 'value'),
 Output('year0-ebit', 'value'),
 Output('year0-rgr', 'value'),
+Output('rgr-next', 'value'),
+Output('opm-next', 'value'),
 Output('cagr-2-5', 'value'),
 Output('opm-target', 'value'),
 Output('sales-to-cap', 'value'),
@@ -291,10 +293,12 @@ def update_current_year_values(df_dict, live_analysis_mode, snapshot_uuid):
             year0_ebit = get_number_from_string(year0_dict['Pretax Income($)'])/1e6 + year0_randd
             year0_capex = -round(get_number_from_string(year0_dict['Net Investing Cash Flow($)']))/1e6
             year0_rgr = round(100 * ((get_number_from_string(df_dict[-2]['Revenue($)'])/get_number_from_string(df_dict[0]['Revenue($)'])) ** (1/(len(df_dict)-2)) - 1), 2)
-
-            cagr_2_5 = min(year0_rgr, 15)    # starting point same as past performance
+            # starting point same as past performance            
+            cagr_2_5 = min(year0_rgr, 15)
             opm_target = min(100 * mean([ (get_number_from_string(y['Pretax Income($)']) + get_number_from_string(y['Research & Development($)']) )/
                                 get_number_from_string(y['Revenue($)']) for y in df_dict]), 50 )
+            rgr_next = round(0.5 * cagr_2_5, 1)
+            opm_next = round(0.5 * opm_target, 1)
             sales_to_cap = max(0.05, mean([get_number_from_string(y['Sales-to-Capital(%)']) for y in df_dict]) )
 
             debt_book_value = (get_number_from_string(year0_dict['Longterm Debt($)']) or 0)/1e6
@@ -307,6 +311,8 @@ def update_current_year_values(df_dict, live_analysis_mode, snapshot_uuid):
             year0_capex = dcf_store_dict.get(ticker).get('year0-capex.value') or 0
             year0_ebit = dcf_store_dict.get(ticker).get('year0-ebit.value') or 0
             year0_rgr = dcf_store_dict.get(ticker).get('year0-rgr.value') or 0
+            rgr_next = dcf_store_dict.get(ticker).get('rgr-next.value') or 0
+            opm_next = dcf_store_dict.get(ticker).get('opm-next.value') or 0
             cagr_2_5 = dcf_store_dict.get(ticker).get('cagr-2-5.value') or 0
             opm_target = dcf_store_dict.get(ticker).get('opm-target.value') or 0
             sales_to_cap = dcf_store_dict.get(ticker).get('sales-to-cap.value') or 0
@@ -315,7 +321,7 @@ def update_current_year_values(df_dict, live_analysis_mode, snapshot_uuid):
             cash = dcf_store_dict.get(ticker).get('cash.value') or 0
             shares_outstanding = dcf_store_dict.get(ticker).get('shares-outstanding.value') or 0
 
-        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt, cash, shares_outstanding
+        return year0_revenue, year0_randd, year0_capex, year0_ebit, year0_rgr, rgr_next, opm_next, cagr_2_5, opm_target, sales_to_cap, debt_book_value, interest_expense_debt, cash, shares_outstanding
     except Exception as e:
         logger.exception(e)
         raise PreventUpdate

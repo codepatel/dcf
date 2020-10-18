@@ -99,10 +99,10 @@ dcflayout = html.Div([
                 dbc.Tab(
                     dbc.Form([
                         dbc.Label("Revenue Growth Rate (%) for next year", html_for="rgr-next"),
-                        dbc.Input(id="rgr-next", type="number", value=0, min=-50, step=1, placeholder="Enter number", debounce=True
+                        dbc.Input(id="rgr-next", type="number", value=0, min=-50, step=0.1, placeholder="Enter number", debounce=True
                                 ),
                         dbc.Label("Operating Margin (%) for next year excl. Reinvestment", html_for="opm-next"),
-                        dbc.Input(id="opm-next", type="number", value=10, max=50, step=1, placeholder="Enter number", debounce=True
+                        dbc.Input(id="opm-next", type="number", value=0, max=50, step=0.1, placeholder="Enter number", debounce=True
                                 ),
                         html.Br(),
                         dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
