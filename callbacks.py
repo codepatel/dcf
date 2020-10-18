@@ -379,7 +379,7 @@ def update_price_stream(df_dict, update_interval):
     try:
         ticker = list(df_dict.keys())[0]
         try:
-            stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=5)
+            stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=1)
             # stream_data_generator = SSEClient('https://stream.wikimedia.org/v2/stream/recentchange', timeout=3)
         except requests.exceptions.ReadTimeout as e:
             return [{'status-info': [html.Br(), 'Last Price Quote had Error 503: SSE stream has no data. Please come back later!'], 'supp-data': []}]
