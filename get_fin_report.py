@@ -1,14 +1,20 @@
+import os
+from datetime import date
+from time import sleep
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
-from datetime import date
-from time import sleep
 import asyncio
+import json
 from aiohttp import ClientSession, ClientResponseError
+# from aiohttp_sse_client import client as sse_client
+from iexfinance.base import _IEXBase
+from dotenv import load_dotenv
+load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import TIMEOUT_12HR, logger, ticker_dict
-from app import cache
+from __init__ import TIMEOUT_12HR, ticker_dict
+from app import cache, cache_redis, logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
 @cache.memoize(timeout=TIMEOUT_12HR)
@@ -24,10 +30,12 @@ def get_financial_report(ticker):
     urls = [urlincome, urlbalancesheet, urlcashflow, urlqincome, urlqbalancesheet, urlqcashflow]
     findata_keys = ['ais', 'abs', 'acf', 'qis', 'qbs', 'qcf']
 
-    loop = asyncio.new_event_loop()
-    # future = asyncio.ensure_future(fetch_async(urls))
-    souped_text_list = loop.run_until_complete(fetch_async(urls))
-    loop.close()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    # future = asyncio.ensure_future(fetch_async(urls, format = 'text'))
+    souped_text_list = loop.run_until_complete(fetch_async(urls, format = 'text'))
     finsoup = {k:souped_text_list[idx] for idx, k in enumerate(findata_keys)}
 
     # build lists for the Financial statements
@@ -76,13 +84,9 @@ def get_financial_report(ticker):
     if all([c == '-' for c in currentLiabilities]):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
-
-    if cfdata_lines['capex'][1][0] != '-':
-        capEx_ttm = get_element(cfdata_lines['capex'],1)
-    else:
-        capEx_ttm = get_element(cfdata_lines['capex'],3) if '-' not in get_element(cfdata_lines['capex'],3) else get_element(cfdata_lines['capex'],2)
-    capEx = get_element(cfdata_lines['capex'],0) + capEx_ttm
-    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
+    
+    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],1)
+    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],1)
     
     # load all the data into dataframe 
     df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
@@ -112,16 +116,71 @@ def get_financial_report(ticker):
 
     return df, lastprice, lastprice_time, report_date_note
 
-async def fetch_async(urls):
+@cache_redis.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
+def get_sector_data(sector):
+    """
+    Get sector data from iexfinance API
+    """
+    try:
+        # ONLY US-listed stocks in NYSE, NASDAQ
+        stocks = [s for s in SectorCollection(sector).fetch() if 'primaryExchange' in s and ''.join(sorted(s['primaryExchange'])).strip() in ['ENSYacceeghkknoortwx', 'AADNQS']]
+        logger.info(f'\t{sector}\tUS-listed:\t{len(stocks)}\tcompanies.')
+        # If we can't see its PE here, we're probably not interested in a stock. Omit it from batch queries.
+        stocks = [s for s in stocks if s['peRatio'] and s['peRatio']>0]
+        logger.info(f'\t{sector}\tPE>0:\t{len(stocks)}\tcompanies.')
+        # IEX doesn't like batch queries for more than 100 symbols at a time.
+        # We need to build our fundamentals info iteratively.
+        batch_idx = 0
+        batch_size = 100
+        adv_stats_api_urls = []
+        resp_dict = {}
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+        while batch_idx < len(stocks):
+            symbol_batch = [s['symbol']
+                            for s in stocks[batch_idx:batch_idx+batch_size]]
+            adv_stats_api_urls.append(os.environ.get('IEX_CLOUD_APIURL') 
+                                + 'stock/market/batch?symbols=' + ','.join(symbol_batch) + '&types=advanced-stats&token=' 
+                                + os.environ.get('IEX_TOKEN'))
+            batch_idx += batch_size
+        # limit to 300 companies per sector for getting advanced-stats endpoint, 
+        # TODO: improve this in future
+        for d in loop.run_until_complete(fetch_async(adv_stats_api_urls[:3], format = 'json')):
+            resp_dict.update(d)
+        logger.info(f'\t{sector}\tGot data for:\t{len(resp_dict)}\tcompanies.')
+        return resp_dict
+    except Exception as e:
+        logger.exception(e)
+
+# We extend iexfinance a bit to support the sector collection endpoint.
+class SectorCollection(_IEXBase):
+
+    def __init__(self, sector, **kwargs):
+        self.sector = sector
+        self.output_format = 'json'
+        super(SectorCollection, self).__init__(**kwargs)
+
+    @property
+    def url(self):
+        return '/stock/market/collection/sector?collectionName={}'.format(self.sector)
+
+async def fetch_async(urls, format = 'text'):
     tasks = []
     # try to use one client session
     async with ClientSession() as session:
         for url in urls:
-            task = asyncio.ensure_future(get_souped_text(session, url))
+            if format == 'text':
+                task = asyncio.ensure_future(get_souped_text(session, url))
+            elif format == 'json':
+                task = asyncio.ensure_future(get_json_resp(session, url))
+            else:
+                raise ValueError('Invalid format for fetching URL: ' + format)
             tasks.append(task)
         # await response outside the for loop
-        souped_text_list = await asyncio.gather(*tasks)
-    return souped_text_list
+        resp_list = await asyncio.gather(*tasks)
+    return resp_list
 
 async def get_souped_text(session, url):
     # sleep(0.1)  # throttle scraping
@@ -136,6 +195,22 @@ async def get_souped_text(session, url):
     except Exception as e:
         logger.exception(e)
 
+async def get_json_resp(session, url):
+    async with session.get(url) as resp:
+        resp = await resp.json()
+    return resp
+
+# async def get_stream_quote(ticker):
+#     async with sse_client.EventSource(
+#         f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}"
+#         ) as event_source:
+#         try:
+#             async for event in event_source:
+#                 logger.info(event)
+#                 return event
+#         except ConnectionError as e:
+#             logger.exception(e)
+
 def get_titles(souptext):
     return souptext.findAll('td', {'class': 'rowTitle'})
 
@@ -147,7 +222,7 @@ def get_income_data(data_titles, data_lines):
         if 'Sales' in title.text \
                 or 'Net Interest Inc' in title.text or 'Non-Interest Income' in title.text:     # for Financial companies top-line
             data_lines['revenue'].append(data_list)
-        if 'EPS (Basic)' in title.text:
+        if 'EPS (Diluted)' in title.text:
             data_lines['eps'].append(data_list)
         if 'Pretax Income' in title.text:
             data_lines['pretaxincome'].append(data_list)
@@ -159,7 +234,7 @@ def get_income_data(data_titles, data_lines):
             data_lines['randd'].append(data_list)
         if 'EBITDA' in title.text:
             data_lines['ebitda'].append(data_list)
-        if 'Basic Shares Outstanding' in title.text:
+        if 'Diluted Shares Outstanding' in title.text:
             data_lines['shares'].append(data_list)
     
     for title in data_titles['ais']:
@@ -167,9 +242,9 @@ def get_income_data(data_titles, data_lines):
 
     for title in data_titles['qis']:    # first convert to numbers, then sum
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        if 'EPS (Basic)' in title.text: # don't scale to 'M' or '%' for pershare
+        if 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
             qtr_sum = f'{sum(qtr_data[1:]):.2f}' if all(v is not None for v in qtr_data) else '-' # use last 4 qtrs for TTM data
-        elif 'Basic Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
+        elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
             qtr_sum = get_string_from_number(qtr_data[-1])
         else:
             qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data) else '-' # use last 4 qtrs for TTM data
@@ -201,9 +276,9 @@ def get_balancesheet_data(data_titles, data_lines):
     
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
-        if 'Net Investing Cash Flow' in title.text:
+        if ' Net Investing Cash Flow' in title.text:
             data_lines['capex'].append(data_list)
-        if 'Free Cash Flow' in title.text:
+        if ' Free Cash Flow' in title.text:
             data_lines['fcf'].append(data_list)
 
     for title in data_titles['acf']:
@@ -265,7 +340,6 @@ def get_yahoo_fin_values(ticker):
     except Exception as e:
         logger.exception(e)
         return 'N/A', []
-
 
 # %%
 if __name__ == '__main__':

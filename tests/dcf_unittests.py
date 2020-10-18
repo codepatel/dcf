@@ -20,8 +20,8 @@ class DCFUnitTest(unittest.TestCase):
         self.assertRaises(KeyError, check_ticker_validity, 'INVALID')
         self.assertRaises(ValueError, get_financial_report, 'INVALID')
     def testwithYahooTicker(self):
-        self.result = get_yahoo_fin_values('AAPL')
-        self.assertTrue(self.result[1])
+        self.result = get_yahoo_fin_values('WMT')
+        self.assertTrue(self.result[1] < 0.5)
     def testwithDCFinputs(self):
         dcf_input = {'AAPL':{'stats_dict':{'lastprice':115}}}
         self.result = get_dcf_df(dcf_input, '0', '10', '5', '32', '1.2', '15', '1.25', '3.5', '8.5', None, 

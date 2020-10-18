@@ -1,3 +1,4 @@
+from math import log10
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -80,10 +81,17 @@ dcflayout = html.Div([
         make_card('Supplemental Info', 'success', dbc.Spinner([html.P(id='supp-info'),
             dcc.Store(id='fin-store'),
             dcc.Store(id='dcf-store'),
+            dcc.Store(id='topsstream-data'),
             dcc.Store(id="handler-parseURL"),
             dcc.Store(id="handler-ticker-valid"),
             dcc.Store(id="handler-past-data"), 
-            dcc.Store(id="handler-dcf-data"),
+            dcc.Store(id="handler-dcf-data"),            
+            dcc.Store(id='handler-lastpricestream'),
+            dcc.Interval(
+                id='price-update-interval',
+                interval=15*1000, # in milliseconds
+                n_intervals=0
+            )
             ]))
         ]),
         dbc.Col([
@@ -91,10 +99,10 @@ dcflayout = html.Div([
                 dbc.Tab(
                     dbc.Form([
                         dbc.Label("Revenue Growth Rate (%) for next year", html_for="rgr-next"),
-                        dbc.Input(id="rgr-next", type="number", value=0, min=-50, step=1, placeholder="Enter number", debounce=True
+                        dbc.Input(id="rgr-next", type="number", value=0, min=-50, step=0.1, placeholder="Enter number", debounce=True
                                 ),
                         dbc.Label("Operating Margin (%) for next year excl. Reinvestment", html_for="opm-next"),
-                        dbc.Input(id="opm-next", type="number", value=10, max=50, step=1, placeholder="Enter number", debounce=True
+                        dbc.Input(id="opm-next", type="number", value=0, max=50, step=0.1, placeholder="Enter number", debounce=True
                                 ),
                         html.Br(),
                         dbc.Label("CAGR (%) for years 2-5 (select range: 0 to 15)", html_for="cagr-2-5"),
@@ -137,7 +145,7 @@ dcflayout = html.Div([
             dcc.Slider(id="terminal-growth-rate", min=0, max=5, step=0.25, value=3.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 6)}, disabled=False),
-            dbc.Label("Cost of Capital (%) (select range: 0 to 15)", html_for="cost-of-cap"),
+            dbc.Label("Cost of Capital / Discount Rate (%) (select range: 0 to 15)", html_for="cost-of-cap"),
             dcc.Slider(id="cost-of-cap", min=0, max=15, step=0.25, value=8.5, 
             tooltip={'always_visible': True, 'placement': 'topRight'},
             marks={v: str(v) for v in range(0, 16)}),
@@ -211,10 +219,80 @@ sectorlayout = html.Div([
         )],
         ),  
     ]), # heading row
-    html.Div(id='sector-app-display-value', children="Under Construction! Please visit later!"),
+    html.Div(id='sector-app-display-value', children="Under Construction! Features may change without notice!", style={'backgroundColor': 'red', 'fontSize': '200%'}),
     html.Br(),
+    dbc.NavLink('IEX Cloud is the easiest way to use financial data. Get started now by clicking this referral link!', href="https://iexcloud.io/s/b47b5006"),
     html.Br(),
+    html.P("Please note that sandbox test response data shown below from IEX Cloud Sandbox APIs is purposefully manipulated to scramble values and is not suitable for production usage. Data returned in the sandbox will look real, but strings are scrambled, dates are manipulated, and numbers are changed.", style={'color': 'red'}),
+    dbc.NavLink('See this link for more information on Sandbox Testing', href="https://iexcloud.io/docs/api/#testing-sandbox"),
     html.Br(),
+
+    dcc.Store(id='sector-store'),
+    # Element for Graph plot of Sector Picks
+    dbc.Row([
+        dbc.Col([html.Div([
+        html.H5('Select Sector(s): '),
+        dcc.Dropdown(
+                id='select-sector',
+                options=[{'label': i, 'value': i} for i in ["Electronic Technology",
+                       "Distribution Services",
+                       "Health Technology",
+                       "Commercial Services",
+                       "Industrial Services",
+                       "Finance",
+                       "Process Industries",
+                       "Transportation",
+                       "Technology Services",
+                       "Producer Manufacturing",
+                       "Retail Trade",
+                       "Consumer Services",
+                       "Non-Energy Minerals",
+                       "Utilities",
+                       "Miscellaneous",
+                       "Health Services",
+                       "Consumer Durables",
+                       "Consumer Non-Durables",
+                       "Communications",
+                       "Energy Minerals",
+                       "Government"]],
+                value=["Electronic Technology", "Health Technology", "Technology Services"],
+                multi=True
+        ),
+        
+        ])
+        ]),
+    ]), # row 1
+    dbc.Row([
+        dbc.Col([
+            html.Br(),
+            dcc.Dropdown(
+                id='select-company',
+                value=[],
+                multi=True,
+                placeholder='Filter to one or more companies, start typing in dropdown'
+            ),
+            dbc.Label("Filter by Enterprise Value (in billions)", html_for="sector-ev-filter"),
+            dcc.RangeSlider(id="sector-ev-filter", min=7, max=13, step=0.001, value=[8, 12.699], 
+            marks={i: str(10 ** (i-9))+'B' for i in range(7, 14)},
+            updatemode='drag',
+            ),
+            html.H5('Crossfilter-Yaxis'),
+            dcc.Dropdown(
+                id='crossfilter-yaxis-column',
+                value='EBITDAToRevenueMargin',
+            ),
+        ], width=3),
+        dbc.Col([
+            dbc.NavLink('Data provided by IEX Cloud', href="https://iexcloud.io"),
+            dbc.Spinner(dcc.Graph(id='sector-distribution'
+            )),
+            html.H5('Crossfilter-Xaxis'),
+            dcc.Dropdown(
+                id='crossfilter-xaxis-column',
+                value='EBITDAToEV(%)',
+            ),
+        ])
+    ]), # row 2
     dbc.Row([dbc.Col(
         # MD text area Element for footer
         dcc.Markdown(children=disclaimer)
