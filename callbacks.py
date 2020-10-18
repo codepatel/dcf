@@ -380,12 +380,16 @@ def update_price_stream(df_dict, update_interval):
         ticker = list(df_dict.keys())[0]
         try:
             stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}tops?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=1)
-            # stream_data_generator = SSEClient('https://stream.wikimedia.org/v2/stream/recentchange', timeout=3)
+            lastprice_key = 'lastSalePrice'
+            lastprice_time_key = 'lastSaleTime'
         except requests.exceptions.ReadTimeout as e:
-            return [{'status-info': [html.Br(), 'Last Price Quote had Error 503: SSE stream has no data. Please come back later!'], 'supp-data': []}]
+            logger.exception(str(e) + '\nTOPS Quote had Error 503: SSE stream has no data, probably because Market is not open now. Please come back later!')
+            stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}last?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=1)
+            lastprice_key = 'price'
+            lastprice_time_key = 'time'
         push_msg = json.loads(next(stream_data_generator).data)
-        lastprice = push_msg['lastSalePrice']
-        lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msg['lastSaleTime']/1000))
+        lastprice = push_msg[0][lastprice_key]
+        lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msg[0][lastprice_time_key]/1000))
         return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
                 'supp-data': []}]
     except Exception as e:
