@@ -383,7 +383,7 @@ def update_price_stream(df_dict, update_interval):
             lastprice_key = 'lastSalePrice'
             lastprice_time_key = 'lastSaleTime'
         except requests.exceptions.ReadTimeout as e:
-            logger.exception(str(e) + '\nTOPS Quote had Error 503: SSE stream has no data, probably because Market is not open now. Please come back later!')
+            logger.exception(str(e) + ' TOPS Quote had Error 503: SSE stream has no data, probably because Market is not open now. Please come back later!')
             stream_data_generator = SSEClient(f"{os.environ.get('IEX_CLOUD_APISSEURL')}last?token={os.environ.get('IEX_TOKEN')}&symbols={ticker}", timeout=1)
             lastprice_key = 'price'
             lastprice_time_key = 'time'
