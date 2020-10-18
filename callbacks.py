@@ -213,7 +213,7 @@ def update_graph(df_dict, column_name, ticker):
         df = pd.concat([df_str_format.iloc[:,0], df_str_format.iloc[:,1:].applymap(get_number_from_string)], axis=1)
         for col in list(df.columns):
             if '%' in col:  # scale up ratio by 100 if unit is %
-                df[col] = df[col]*100
+                df.loc[:, col] *= 100
         fig = px.line(df, x='index', y=column_name,
                         line_shape='spline')
         fig.update_traces(mode='lines+markers')
@@ -338,22 +338,22 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
         sector_df_filtered = sector_df.query(f"enterpriseValue >= {10 ** ev_limits[0]} \
                         & enterpriseValue <= {10 ** ev_limits[1]}")
     else:
-        sector_df_filtered= sector_df.query(f"companyName in {company_selections} \
+        sector_df_filtered = sector_df.query(f"companyName in {company_selections} \
                         & enterpriseValue >= {10 ** ev_limits[0]} \
                         & enterpriseValue <= {10 ** ev_limits[1]}")
     total_companies = len(sector_df_filtered)
     if not total_companies:
         return []
     else:
-        sector_df_filtered['EBITDAToEV(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.enterpriseValue
-        sector_df_filtered['EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered.enterpriseValueToRevenue
-        sector_df_filtered['TotalAssets'] = (sector_df_filtered.marketcap / sector_df_filtered.priceToBook) * (1 + sector_df_filtered.debtToEquity) + sector_df_filtered.currentDebt
+        sector_df_filtered.loc[:, 'EBITDAToEV(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.enterpriseValue
+        sector_df_filtered.loc[:, 'EBITDAToRevenueMargin'] = sector_df_filtered['EBITDAToEV(%)'] * sector_df_filtered.enterpriseValueToRevenue
+        sector_df_filtered.loc[:, 'TotalAssets'] = (sector_df_filtered.marketcap / sector_df_filtered.priceToBook) * (1 + sector_df_filtered.debtToEquity) + sector_df_filtered.currentDebt
         # Alternate Debt + Equity: (sector_df_filtered.enterpriseValue - sector_df_filtered.marketcap + sector_df_filtered.totalCash) * (1 + 1/sector_df_filtered.debtToEquity)
-        sector_df_filtered['EBITDAToAssets(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.TotalAssets
+        sector_df_filtered.loc[:, 'EBITDAToAssets(%)'] = sector_df_filtered.EBITDA / sector_df_filtered.TotalAssets
 
         for col in list(sector_df_filtered.columns):
             if 'Margin' in col or 'Percent' in col or '%' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
-                sector_df_filtered[col] = sector_df_filtered[col]*100
+                sector_df_filtered.loc[:, col] *= 100
         x_limits = [-5, min([sector_df_filtered[xaxis].max(), 40])+5] if xaxis == 'EBITDAToEV(%)' else None
         y_limits = [-5, min([sector_df_filtered[yaxis].max(), 80])+5] if yaxis in ['EBITDAToRevenueMargin', 'EBITDAToAssets(%)'] else None
         fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, range_x=x_limits, range_y=y_limits,
@@ -371,15 +371,15 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
 [Input('lastpricestream-data', 'data'),
 Input('price-update-interval', 'n_intervals')])
 def update_price_stream(stream_data_dict, update_interval):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
+    # try:
+    #     loop = asyncio.get_event_loop()
+    # except RuntimeError:
+    #     loop = asyncio.new_event_loop()
     ticker = stream_data_dict['tops_quote']
     try:
-        push_msgs = json.loads(loop.run_until_complete(get_stream_quote(ticker)).data)
+        push_msgs = get_stream_quote(ticker)
         if not push_msgs:
-            raise FileNotFoundError('503: SSE stream has no data. Please come back later!')
+            raise TimeoutError('Last Price Quote had Error 503: SSE stream has no data. Please come back later!')
         lastprice = push_msgs[-1]['lastSalePrice']
         lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msgs[-1]['lastSaleTime']/1000))
         return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
