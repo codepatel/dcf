@@ -240,15 +240,21 @@ def get_income_data(data_titles, data_lines):
     for title in data_titles['ais']:
         build_income_list(walk_row(title))
 
-    for title in data_titles['qis']:    # first convert to numbers, then sum
+    for title in data_titles['qis']:    # first convert to numbers, then sum last 4 of 5 qtrs for TTM data
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        if 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
-            qtr_sum = f'{sum(qtr_data[1:]):.2f}' if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
+        qtr_sum = sum(qtr_data[1:]) if all(v is not None for v in qtr_data[1:]) else None
+        if 'Sales Growth' in title.text \
+                or 'Net Interest Inc After Loan Loss Prov Growth' in title.text:     # for Financial companies top-line
+            qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['revenue'][-1][0])/get_number_from_string(data_lines['revenue'][0][-1]) - 1)
+        elif 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
+            qtr_sum_str = f'{qtr_sum:.2f}' if qtr_sum else '-'           
+            if 'Growth' in title.text:    # get growth rate
+                qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['eps'][-1][0])/get_number_from_string(data_lines['eps'][0][-1]) - 1)
         elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
-            qtr_sum = get_string_from_number(qtr_data[-1])
+            qtr_sum_str = get_string_from_number(qtr_data[-1]) if qtr_sum else '-'
         else:
-            qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
-        build_income_list([qtr_sum])
+            qtr_sum_str = get_string_from_number(qtr_sum) if qtr_sum else '-'
+        build_income_list([qtr_sum_str])
 
     return data_lines
 
@@ -284,10 +290,10 @@ def get_cashflow_data(data_titles, data_lines):
     for title in data_titles['acf']:
         build_cashflow_list(walk_row(title))
 
-    for title in data_titles['qcf']:    # first convert to numbers, then sum
+    for title in data_titles['qcf']:    # first convert to numbers, then sum last 4 of 5 qtrs for TTM data
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
-        build_cashflow_list([qtr_sum])
+        qtr_sum_str = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-'
+        build_cashflow_list([qtr_sum_str])
     
     return data_lines
 
