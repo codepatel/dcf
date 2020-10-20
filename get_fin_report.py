@@ -1,5 +1,4 @@
 import os
-from datetime import date
 from time import sleep
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -13,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import TIMEOUT_12HR, ticker_dict
+from __init__ import TIMEOUT_12HR, CURRENT_YEAR, ticker_dict
 from app import cache, cache_redis, logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
@@ -96,7 +95,7 @@ def get_financial_report(ticker):
             'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets, 
             'Total Current Liabilities($)': currentLiabilities, 'Cash($)': cash,
             'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
-            },index=range(date.today().year-5,date.today().year+1))
+            },index=range(CURRENT_YEAR-5,CURRENT_YEAR+1))
     df.reset_index(inplace=True)
     # Derived Financial Metrics/Ratios
     df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)

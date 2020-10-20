@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import json
+from datetime import date
 
 if not os.path.exists('app'):   # use /app for logging and caching
     os.makedirs('app')
@@ -12,6 +13,7 @@ HERE = Path(__file__).parent
 TIMEOUT_12HR = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
 DEFAULT_TICKER = 'AAPL'
 DEFAULT_SNAPSHOT_UUID = '95df36ac-bc52-52e1-bdf6-bac53b7aa4ca'
+CURRENT_YEAR = date.today().year if date.today().month>2 else date.today().year-1
 
 # Delete pyc: find . -name \*.pyc -delete
 

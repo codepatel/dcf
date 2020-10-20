@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import date
+from __init__ import CURRENT_YEAR
 from get_fin_report import get_number_from_string, get_string_from_number
 
 # Assumptions for DCF:
@@ -94,8 +94,8 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
     dcf_output_dict['last_price'] = last_price
 
     df = pd.DataFrame(dcftable).applymap(get_string_from_number)
-    current_year = date.today().year if date.today().month>2 else date.today().year-1
-    df['Year'] = range(current_year, current_year+TERMINAL_YEAR_LENGTH+2)
+    
+    df['Year'] = range(CURRENT_YEAR, CURRENT_YEAR+TERMINAL_YEAR_LENGTH+2)
     # df.set_index('Year', inplace=True)
     column_list = list(df.columns)  # column 'Year' move to be first
     df = df.reindex(columns=[column_list[-1]] + column_list[:-1], copy=False)
