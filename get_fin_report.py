@@ -84,7 +84,12 @@ def get_financial_report(ticker):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
     
-    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],3)
+    if len(cfdata_lines['capex']) == 2: # some companies data doesn't have Net Investing Cash Flow Growth and Net Investing Cash Flow / Sales
+        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],1)
+    elif len(cfdata_lines['capex']) == 4: # some companies data doesn't have Net Investing Cash Flow / Sales
+        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],2)
+    else:
+        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],3)
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
