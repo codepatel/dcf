@@ -293,6 +293,9 @@ sectorlayout = html.Div([
                 id='crossfilter-xaxis-column',
                 value='EBITDAToEV(%)',
             ),
+            html.H5('Workaround: IEX Data is unreliable, so can change to Market Cap for filtering, analysis instead of preferred method using Enterprise Value (which includes Debt leverage)'),
+            html.Br(),
+            html.H5('If graph is blank, IEX Data has been filtered out due to NAs')
         ])
     ]), # row 2
     dbc.Row([dbc.Col(

@@ -335,6 +335,9 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
     if not sector_dict:
         return []
     sector_df = pd.DataFrame.from_dict({s:sector_dict[s]['advanced-stats'] for s in sector_dict}, orient='index')
+    sector_df.dropna(inplace=True, subset=['marketcap', 'enterpriseValue', 'profitMargin', 'enterpriseValueToRevenue'])
+    if sector_df.empty:
+        return []
     if not company_selections:
         sector_df_filtered = sector_df.query(f"enterpriseValue >= {10 ** ev_limits[0]} \
                         & enterpriseValue <= {10 ** ev_limits[1]}")
@@ -355,8 +358,8 @@ def graph_sector_matrix(sector_dict, company_selections, ev_limits, xaxis, yaxis
         for col in list(sector_df_filtered.columns):
             if 'Margin' in col or 'Percent' in col or '%' in col:  # scale up ratio by 100 if 'Margin' or 'Percent' in col name
                 sector_df_filtered.loc[:, col] *= 100
-        x_limits = [-5, min([sector_df_filtered[xaxis].max(), 40])+5] if xaxis == 'EBITDAToEV(%)' else None
-        y_limits = [-5, min([sector_df_filtered[yaxis].max(), 80])+5] if yaxis in ['EBITDAToRevenueMargin', 'EBITDAToAssets(%)'] else None
+        x_limits = [-5, min([sector_df_filtered[xaxis].max(), 40])+5] if xaxis in ['EBITDAToEV(%)'] else None
+        y_limits = [-5, min([sector_df_filtered[yaxis].max(), 80])+5] if yaxis in ['EBITDAToRevenueMargin', 'EBITDAToAssets(%)', 'profitMargin'] else None
         fig = px.scatter(sector_df_filtered, x=xaxis, y=yaxis, range_x=x_limits, range_y=y_limits,
                         size=sector_df_filtered['enterpriseValue']/1e9, size_max=50, 
                         labels={'size': 'Enterprise Value (billions)', 'index': 'ticker', 'hover_data_1': 'Market Cap (billions)'},
@@ -394,4 +397,4 @@ def update_price_stream(df_dict, update_interval):
                 'supp-data': []}]
     except Exception as e:
         logger.exception(e)
-        return [{'status-info': [html.Br(), str(e)], 'supp-data': []}]
+        return [{'status-info': [html.Br(), str(e).split('=')[0]], 'supp-data': []}]    # hide the API token in status msg output

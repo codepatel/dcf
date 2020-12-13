@@ -1,0 +1,137 @@
+[
+  {
+    "mic": "ARCX",
+    "name": "NYSE Arca",
+    "longName": "NYSE ARCA",
+    "tapeId": "P",
+    "oatsId": "XP",
+    "refId": "PSE",
+    "type": "equities"
+  },
+  {
+    "mic": "EDGX",
+    "name": "Cboe EDGX",
+    "longName": "Cboe EDGX US Equities Exchange",
+    "tapeId": "K",
+    "oatsId": "XK",
+    "refId": "EDGX",
+    "type": "equities"
+  },
+  {
+    "mic": "BATS",
+    "name": "Cboe BZX",
+    "longName": "Cboe BZX US Equities Exchange",
+    "tapeId": "Z",
+    "oatsId": "XZ",
+    "refId": "BATS",
+    "type": "equities"
+  },
+  {
+    "mic": "BATY",
+    "name": "Cboe BYX",
+    "longName": "Cboe BYX US Equities Exchange",
+    "tapeId": "Y",
+    "oatsId": "XY",
+    "refId": "BATY",
+    "type": "equities"
+  },
+  {
+    "mic": "EDGA",
+    "name": "Cboe EDGA",
+    "longName": "Cboe EDGA US Equities Exchange",
+    "tapeId": "J",
+    "oatsId": "XJ",
+    "refId": "EDGA",
+    "type": "equities"
+  },
+  {
+    "mic": "IEXG",
+    "name": "IEX",
+    "longName": "Investors Exchange",
+    "tapeId": "V",
+    "oatsId": "XV",
+    "refId": "IEXG",
+    "type": "equities"
+  },
+  {
+    "mic": "XBOS",
+    "name": "Nasdaq OMX BX",
+    "longName": "Nasdaq OMX BX",
+    "tapeId": "B",
+    "oatsId": "XB",
+    "refId": "BOS",
+    "type": "equities"
+  },
+  {
+    "mic": "XPHL",
+    "name": "Nasdaq OMX PHLX",
+    "longName": "Nasdaq OMX PHLX",
+    "tapeId": "X",
+    "oatsId": "XX",
+    "refId": "PHLX",
+    "type": "equities"
+  },
+  {
+    "mic": "XCHI",
+    "name": "NYSE Chicago",
+    "longName": "NYSE Chicago",
+    "tapeId": "M",
+    "oatsId": "XM",
+    "refId": "CHI",
+    "type": "equities"
+  },
+  {
+    "mic": "XASE",
+    "name": "NYSE American",
+    "longName": "NYSE American",
+    "tapeId": "A",
+    "oatsId": "XA",
+    "refId": "ASE",
+    "type": "equities"
+  },
+  {
+    "mic": "XCIS",
+    "name": "NYSE National",
+    "longName": "NYSE National",
+    "tapeId": "C",
+    "oatsId": "XC",
+    "refId": "CIS",
+    "type": "equities"
+  },
+  {
+    "mic": "XNYS",
+    "name": "NYSE",
+    "longName": "New York Stock Exchange",
+    "tapeId": "N",
+    "oatsId": "XN",
+    "refId": "NYS",
+    "type": "equities"
+  },
+  {
+    "mic": "XNGS",
+    "name": "Nasdaq",
+    "longName": "Nasdaq",
+    "tapeId": "T",
+    "oatsId": "XQ",
+    "refId": "NAS",
+    "type": "equities"
+  },
+  {
+    "mic": "OTCM",
+    "name": "US OTC",
+    "longName": "OTC Markets",
+    "tapeId": "",
+    "oatsId": "",
+    "refId": "PINX",
+    "type": "otc"
+  },
+  {
+    "mic": "TRF",
+    "name": "Off Exchange",
+    "longName": "Off Exchange",
+    "tapeId": "",
+    "oatsId": "",
+    "refId": "",
+    "type": "equities"
+  }
+]

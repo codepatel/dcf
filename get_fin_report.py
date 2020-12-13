@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import TIMEOUT_12HR, CURRENT_YEAR, ticker_dict
+from __init__ import TIMEOUT_12HR, CURRENT_YEAR, ticker_dict, get_us_exchanges
 from app import cache, cache_redis, logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
@@ -121,9 +121,9 @@ def get_sector_data(sector):
     Get sector data from iexfinance API
     """
     try:
-        # ONLY US-listed stocks in NYSE, NASDAQ
-        stocks = [s for s in SectorCollection(sector).fetch() if 'primaryExchange' in s and ''.join(sorted(s['primaryExchange'])).strip() in ['ENSYacceeghkknoortwx', 'AADNQS']]
-        logger.info(f'\t{sector}\tUS-listed:\t{len(stocks)}\tcompanies.')
+        # ONLY US-listed stocks in NYSE, NASDAQ, and other US market providers
+        stocks = [s for s in SectorCollection(sector, output_format = 'json').fetch() if 'primaryExchange' in s and ''.join(sorted(s['primaryExchange'].upper())).strip() in [''.join(sorted(e['name'].upper())).strip() for e in get_us_exchanges()]]
+        logger.info(f'\t{sector}\tSector Universe of US-listed:\t{len(stocks)}\tcompanies.')
         # If we can't see its PE here, we're probably not interested in a stock. Omit it from batch queries.
         stocks = [s for s in stocks if s['peRatio'] and s['peRatio']>0]
         logger.info(f'\t{sector}\tPE>0:\t{len(stocks)}\tcompanies.')
@@ -158,7 +158,6 @@ class SectorCollection(_IEXBase):
 
     def __init__(self, sector, **kwargs):
         self.sector = sector
-        self.output_format = 'json'
         super(SectorCollection, self).__init__(**kwargs)
 
     @property
