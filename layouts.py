@@ -158,7 +158,9 @@ dcflayout = html.Div([
         dbc.Col([
             make_card("Past records Financial table (Current Year is TTM/MRQ) ", "secondary", 
             dbc.Spinner(html.Div(id="fin-table"))),              
-            html.Small('Data source: https://www.marketwatch.com/ Copyright 2020 FactSet Research Systems Inc. All rights reserved. Source FactSet Fundamentals')
+            html.Small([html.A('Data source: Marketwatch.com', href='https://www.marketwatch.com/investing/stock/aapl/financials'),
+                html.P('Copyright 2020 FactSet Research Systems Inc. All rights reserved. Source FactSet Fundamentals'),
+            ])
         ]),
         dbc.Col([html.Div([
         html.H6('Select Parameter(s) to show trend over the past periods'),

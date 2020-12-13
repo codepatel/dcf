@@ -1,5 +1,4 @@
 import os
-from datetime import date
 from time import sleep
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -13,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # from functools import lru_cache # https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945
 # Local imports
-from __init__ import TIMEOUT_12HR, ticker_dict
+from __init__ import TIMEOUT_12HR, CURRENT_YEAR, ticker_dict
 from app import cache, cache_redis, logger
 
 # @lru_cache(maxsize = 100)     # now using Flask-Caching in app.py for sharing memory across instances, sessions, time-based expiry
@@ -74,9 +73,9 @@ def get_financial_report(ticker):
     shareholderEquity = get_element(bsdata_lines['equity'],0) + get_element(bsdata_lines['equity'],2)
     longtermDebt = get_element(bsdata_lines['ltd'],0) + get_element(bsdata_lines['ltd'],1)
     if bsdata_lines['totalassets'][1][0] != '-':
-        totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],6)
+        totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],7)
     else:
-        totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],5)
+        totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],6)
     if get_number_from_string(totalAssets[0]) < 10:
         totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],4)
     intangibleAssets = get_element(bsdata_lines['intangibleassets'],0) + get_element(bsdata_lines['intangibleassets'],1)
@@ -85,8 +84,8 @@ def get_financial_report(ticker):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
     
-    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],1)
-    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],1)
+    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],3)
+    fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
     df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
@@ -96,7 +95,7 @@ def get_financial_report(ticker):
             'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets, 
             'Total Current Liabilities($)': currentLiabilities, 'Cash($)': cash,
             'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
-            },index=range(date.today().year-5,date.today().year+1))
+            },index=range(CURRENT_YEAR-5,CURRENT_YEAR+1))
     df.reset_index(inplace=True)
     # Derived Financial Metrics/Ratios
     df['Net Profit Margin(%)'] = (df['Net Income($)'].apply(get_number_from_string) / df['Revenue($)'].apply(get_number_from_string)).apply(get_string_from_number)
@@ -106,10 +105,10 @@ def get_financial_report(ticker):
     df['Capital Employed($)'] = df['Capital Employed($)'].apply(get_string_from_number)
 
     try:
-        lastprice = finsoup['ais'].findAll('p', {'class': 'data bgLast'})[0].text
-        lastprice_time = finsoup['ais'].findAll('p', {'class': 'lastcolumn bgTimestamp longformat'})[0].text
-        fiscal_year_note = finsoup['ais'].findAll('th', {'class': 'rowTitle'})[0].text.split('.')[0]
-        mrq_date = finsoup['qis'].findAll('th', {'scope': 'col'})[-2].text
+        lastprice = finsoup['ais'].findAll('bg-quote', {'class': 'value'})[0].text
+        lastprice_time = finsoup['ais'].findAll('bg-quote', {'field': 'date'})[0].text
+        fiscal_year_note = finsoup['abs'].findAll('small', {'class': 'small'})[0].text
+        mrq_date = finsoup['qbs'].findAll('thead', {'class': 'table__header'})[0].text.split('\n')[-4]
         report_date_note = mrq_date + ", " + fiscal_year_note
     except IndexError:
         raise IndexError("Data not found for Ticker: " + ticker)
@@ -212,10 +211,10 @@ async def get_json_resp(session, url):
 #             logger.exception(e)
 
 def get_titles(souptext):
-    return souptext.findAll('td', {'class': 'rowTitle'})
+    return souptext.findAll('td', {'class': 'overflow__cell fixed--column'})
 
-def walk_row(titlerow):
-    return [td.text for td in titlerow.findNextSiblings(attrs={'class': 'valueCell'}) if td.text]
+def walk_row(titlerow): # use the fact that data-chart-data has the numeric values
+    return titlerow.findNextSiblings(attrs={'class': 'overflow__cell'})[-1].div.div['data-chart-data'].split(',')
 
 def get_income_data(data_titles, data_lines):
     def build_income_list(data_list):
@@ -238,17 +237,26 @@ def get_income_data(data_titles, data_lines):
             data_lines['shares'].append(data_list)
     
     for title in data_titles['ais']:
-        build_income_list(walk_row(title))
+        if 'Growth' in title.text:    # scale to %
+            build_income_list([get_string_from_number(float(d), True) if d else '-' for d in walk_row(title)])
+        else:   
+            build_income_list([get_string_from_number(float(d)) if d else '-' for d in walk_row(title)])
 
-    for title in data_titles['qis']:    # first convert to numbers, then sum
+    for title in data_titles['qis']:    # first convert to numbers, then sum last 4 of 5 qtrs for TTM data
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        if 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
-            qtr_sum = f'{sum(qtr_data[1:]):.2f}' if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
+        qtr_sum = sum(qtr_data[1:]) if all(v is not None for v in qtr_data[1:]) else None
+        if 'Sales Growth' in title.text \
+                or 'Net Interest Inc After Loan Loss Prov Growth' in title.text:     # for Financial companies top-line
+            qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['revenue'][-1][0])/get_number_from_string(data_lines['revenue'][0][-1]) - 1, True)
+        elif 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
+            qtr_sum_str = f'{qtr_sum:.2f}' if qtr_sum else '-'           
+            if 'Growth' in title.text:    # get growth rate
+                qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['eps'][-1][0])/get_number_from_string(data_lines['eps'][0][-1]) - 1, True)
         elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
-            qtr_sum = get_string_from_number(qtr_data[-1])
+            qtr_sum_str = get_string_from_number(qtr_data[-1]) if qtr_sum else '-'
         else:
-            qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
-        build_income_list([qtr_sum])
+            qtr_sum_str = get_string_from_number(qtr_sum) if qtr_sum else '-'
+        build_income_list([qtr_sum_str])
 
     return data_lines
 
@@ -268,26 +276,27 @@ def get_balancesheet_data(data_titles, data_lines):
             data_lines['cash'].append(data_list)
     
     for title in data_titles['abs']:
-        build_balancesheet_list(walk_row(title))
+        build_balancesheet_list([get_string_from_number(float(d)) if d else '-' for d in walk_row(title)])
     for title in data_titles['qbs']:
-        build_balancesheet_list([walk_row(title)[-1]])    # only get MRQ
+        mrq_cell = walk_row(title)[-1]
+        build_balancesheet_list([get_string_from_number(float(mrq_cell)) if mrq_cell else '-'])    # only get MRQ
     
     return data_lines
     
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
-        if ' Net Investing Cash Flow' in title.text:
+        if 'Net Investing Cash Flow' in title.text:
             data_lines['capex'].append(data_list)
-        if ' Free Cash Flow' in title.text:
+        if 'Free Cash Flow' in title.text:
             data_lines['fcf'].append(data_list)
 
     for title in data_titles['acf']:
-        build_cashflow_list(walk_row(title))
+        build_cashflow_list([get_string_from_number(float(d)) if d else '-' for d in walk_row(title)])
 
-    for title in data_titles['qcf']:    # first convert to numbers, then sum
+    for title in data_titles['qcf']:    # first convert to numbers, then sum last 4 of 5 qtrs for TTM data
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
-        qtr_sum = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-' # use last 4 qtrs for TTM data
-        build_cashflow_list([qtr_sum])
+        qtr_sum_str = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-'
+        build_cashflow_list([qtr_sum_str])
     
     return data_lines
 
@@ -318,14 +327,14 @@ def get_number_from_string(str_value):
         return None
 
 
-def get_string_from_number(num_value):
+def get_string_from_number(num_value, ratio_to_percent=False):
     if abs(num_value) > 1e12:
         return '{:.2f}'.format(num_value/1e12) + 'T' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value/1e12) + 'T)'
     if abs(num_value) > 1e9:
         return '{:.2f}'.format(num_value/1e9) + 'B' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value/1e9) + 'B)'
     if abs(num_value) > 1e6:
         return '{:.2f}'.format(num_value/1e6) + 'M' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value/1e6) + 'M)'
-    if abs(num_value) < 10: # < 10 i.e. assume ratio < 1000% 
+    if ratio_to_percent:
         return '{:.2f}'.format(num_value*100) + '%' if num_value >= 0 else '(' + '{:.2f}'.format(-num_value*100) + '%)'
     return '{:.2f}'.format(num_value)
 
