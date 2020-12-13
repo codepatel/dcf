@@ -8,7 +8,7 @@ if not os.path.exists('app'):   # use /app for logging and caching
 
 from app import cache
 
-VERSION = 'v0.6-alpha.1'
+VERSION = 'v0.6-alpha.2'
 HERE = Path(__file__).parent
 TIMEOUT_12HR = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
 DEFAULT_TICKER = 'AAPL'
@@ -28,3 +28,8 @@ def ticker_dict():  # For user-entered ticker validation
 
 def exchange_list():
     return list(set([s['exchange'] for s in get_symbols()]))
+
+def get_us_exchanges():
+    with open(Path(HERE, 'assets', 'us_exchanges.json')) as usexfile:
+        usexdata = json.load(usexfile)
+    return usexdata
