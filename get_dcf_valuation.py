@@ -93,7 +93,11 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
     dcf_output_dict['estimated_value_per_share'] = dcf_output_dict['common_equity_value']/dcf_output_dict['outstanding_shares']
     dcf_output_dict['last_price'] = last_price
 
-    df = pd.DataFrame(dcftable).applymap(get_string_from_number)
+    df = pd.DataFrame(dcftable)
+    for col in list(df.columns):
+        if '%' in col:  # scale up ratio by 100 if unit is %
+            df.loc[:, col] *= 100
+    df = df.applymap(get_string_from_number)
     
     df['Year'] = range(CURRENT_YEAR, CURRENT_YEAR+TERMINAL_YEAR_LENGTH+2)
     # df.set_index('Year', inplace=True)
