@@ -73,10 +73,10 @@ def get_financial_report(ticker):
     shareholderEquity = get_element(bsdata_lines['equity'],0) + get_element(bsdata_lines['equity'],2)
     longtermDebt = get_element(bsdata_lines['ltd'],0) + get_element(bsdata_lines['ltd'],1)
     if bsdata_lines['totalassets'][1][0] != '-':
-        totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],7)
+        totalAssets = get_element(bsdata_lines['totalassets'],1) + get_element(bsdata_lines['totalassets'],1+int(len(bsdata_lines['totalassets'])/2))
     else:
         totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],6)
-    if get_number_from_string(totalAssets[0]) < 10:
+    if get_number_from_string(totalAssets[0]) < 10: # another special case?
         totalAssets = get_element(bsdata_lines['totalassets'],0) + get_element(bsdata_lines['totalassets'],4)
     intangibleAssets = get_element(bsdata_lines['intangibleassets'],0) + get_element(bsdata_lines['intangibleassets'],1)
     currentLiabilities = get_element(bsdata_lines['currentliab'],0) + get_element(bsdata_lines['currentliab'],1)
@@ -84,12 +84,8 @@ def get_financial_report(ticker):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
     
-    if len(cfdata_lines['capex']) == 2: # some companies data doesn't have Net Investing Cash Flow Growth and Net Investing Cash Flow / Sales
-        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],1)
-    elif len(cfdata_lines['capex']) == 4: # some companies data doesn't have Net Investing Cash Flow / Sales
-        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],2)
-    else:
-        capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],3)
+    # some companies data doesn't have Net Investing Cash Flow Growth or Net Investing Cash Flow / Sales
+    capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],int(len(cfdata_lines['capex'])/2))
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
     
     # load all the data into dataframe 
