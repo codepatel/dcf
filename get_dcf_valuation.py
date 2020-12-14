@@ -49,8 +49,8 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
     delta_rate_late_stage = (cagr_2_5 - terminal_growth_rate) / (TERMINAL_YEAR_LENGTH-5)
 
     year0_margin = year0_ebit/year0_revenue
-    year0_ebitlesstax = year0_ebit * (1-tax_rate) + year0_randd
-    year0_reinvestment = min((year0_revenue * year0_rgr / sales_to_cap), year0_capex) + year0_randd
+    year0_ebitlesstax = (year0_ebit) * (1-tax_rate)
+    year0_reinvestment = min((year0_revenue * year0_rgr / sales_to_cap), year0_capex)
     year0_fcf = year0_ebitlesstax - year0_reinvestment
     year0_randd_to_revenue = year0_randd/year0_revenue
 
