@@ -70,7 +70,7 @@ def get_dcf_df(df_dict=[], rgr_next='5', opm_next='10',
     }
     for period in range(1, TERMINAL_YEAR_LENGTH+2):
         dcftable['Revenue($)'].append(dcftable['Revenue($)'][period-1] * (1+dcftable['Revenue Growth(%)'][period]))
-        dcftable['EBIT+R&D($)'].append(dcftable['Revenue($)'][period] * dcftable['Operating Margin(%)'][period])
+        dcftable['EBIT+R&D($)'].append(dcftable['Revenue($)'][period] * (dcftable['Operating Margin(%)'][period] + year0_randd_to_revenue))
         dcftable['EBIT(1-T)($)'].append(dcftable['EBIT+R&D($)'][period] * (1 - dcftable['Tax Rate(%)'][period]))
         capitalized_randd = year0_randd_to_revenue * dcftable['Revenue($)'][period] * (1-0.05*period)
         dcftable['Reinvestment($)'].append((dcftable['Revenue($)'][period]-dcftable['Revenue($)'][period-1])/sales_to_cap + (capitalized_randd) if dcftable['Revenue Growth(%)'][period]>0 else capitalized_randd)
