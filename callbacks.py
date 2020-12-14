@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import time
+from datetime import datetime
 import json
 import traceback
 import uuid
@@ -74,6 +75,8 @@ def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid
         snapshot_uuid = str(uuid.uuid5(uuid.UUID(snapshot_uuid), ticker))
         if save_button_clicked:
             # df_dict[ticker] = {**df_dict[ticker], **dcf_dict[ticker]}
+            if 'analysis_timestamp' in df_dict[ticker]['stats_dict']:   # >= v0.6-alpha.3
+                df_dict[ticker]['stats_dict']['analysis_timestamp'] += f',\n{snapshot_uuid} : Analysis saved @ {datetime.now().strftime("%b %-m %Y %H:%M:%S")}'
             db.set(ticker+'-'+snapshot_uuid, json.dumps(df_dict))
         return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
@@ -160,7 +163,8 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
                             'lastprice_time': lastprice_time,
                             'beta': beta,
                             'next_earnings_date': next_earnings_date,
-                            'report_date_note': report_date_note
+                            'report_date_note': report_date_note,
+                            'analysis_timestamp': datetime.now().strftime("%b %-m %Y %H:%M:%S"),
                             }
 
             df_dict = {ticker_allcaps: {'fin_report_dict': df.to_dict('records'), 'stats_dict': stats_record}}
@@ -172,7 +176,8 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
             stats_record = df_dict[ticker_allcaps]['stats_dict']
         select_column_options = [{'label': i, 'value': i} for i in list(df.columns)[1:]]
 
-        supp_data_notes = f"MRQ report ending: {stats_record['report_date_note']},\n" \
+        supp_data_notes = f"Original Analysis performed on : {stats_record.get('analysis_timestamp', 'NA')},\n" \
+            f"MRQ report ending: {stats_record['report_date_note']},\n" \
             f"Shares outstanding: {df['Shares Outstanding'].iloc[-1]},\n" \
             f"Market Cap: {get_string_from_number(get_number_from_string(df['Shares Outstanding'].iloc[-1]) * stats_record['lastprice'])},\n" \
             f"Cash as of MRQ: {df['Cash($)'].iloc[-1]},\n" \
