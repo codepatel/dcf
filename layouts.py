@@ -113,7 +113,7 @@ dcflayout = html.Div([
                         dcc.Slider(id="opm-target", min=0, max=50, step=0.1, value=20, 
                         tooltip={'always_visible': True, 'placement': 'topRight'},
                         marks={v: str(v) for v in range(0, 55, 5)}),
-                        dbc.Label("Sales to capital ratio (for computing reinvestment, select range: 0 to 5)", html_for="sales-to-cap"),
+                        dbc.Label("Sales to capital ratio (for computing future reinvestment, select range: 0 to 5)", html_for="sales-to-cap"),
                         dcc.Slider(id="sales-to-cap", min=0, max=5, step=0.01, value=1, 
                         tooltip={'always_visible': True, 'placement': 'topRight'},
                         marks={v: str(v) for v in range(0, 6)}),
