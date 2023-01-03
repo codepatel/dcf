@@ -1,8 +1,8 @@
 from math import log10
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
-import dash_table as dt
+from dash import dash_table as dt
 # Local imports
 from __init__ import VERSION, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID
 from dash_utils import make_card, ticker_inputs, make_item, make_social_media_share
@@ -57,7 +57,7 @@ dcflayout = html.Div([
             #     options=[{'label': s['symbol']+'('+s['exchange']+'):'+s['name'], 'value': s['symbol']} for s in symdata],
             #     value='AAPL',
             #     placeholder='Start typing Ticker, press Enter'),
-            dbc.FormGroup(
+            dbc.Form(
                     [
                         dbc.Label("Analysis mode selection: (if inactive, use Snapshot mode)"),
                         dbc.Checklist(
@@ -188,16 +188,16 @@ dcflayout = html.Div([
                 2. No Preferred stock/dividends in capital structure (you can override this)
                 3. No Convertible debt/equity portion in capital structure (you can override this)
             '''),
-            dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary', block=True),
+            dbc.Button("Run DCF calculation again with overrides", id='run-dcf', color='primary'),
             make_card("DCF table (2-stage Terminal value after 10 years) ", "secondary", 
             dbc.Spinner(html.Div(id="dcf-table")))
         ])),
         dbc.Col([
             make_card("Notes/Commentary", "primary",
-            dbc.Textarea(bs_size="lg", placeholder='Enter your notes and commentary on the analysis')
+            dbc.Textarea(size="lg", placeholder='Enter your notes and commentary on the analysis')
             )
         ])
-    ],form=True), # row 3
+    ]), # row 3
     dbc.Row([
         dbc.Col([
             
