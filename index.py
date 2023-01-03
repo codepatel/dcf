@@ -1,5 +1,4 @@
 import os
-from distutils.util import strtobool
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
@@ -38,4 +37,4 @@ def display_page(pathname):
 #     return html.P("This shouldn't ever be displayed...")
 
 if __name__ == '__main__':
-    app.run_server(debug=bool(strtobool(os.environ.get('DEBUG', 'False'))), use_reloader=False) # Turn off reloader if inside Jupyter or using interactive debugging
+    app.run_server(host=os.environ.get('HOST', '127.0.0.1'), debug=bool(os.environ.get('DEBUG', 'False')), use_reloader=False) # Turn off reloader if inside Jupyter or using interactive debugging
