@@ -1,7 +1,7 @@
 from statistics import mean
 import json
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -10,7 +10,7 @@ from app import app, db, logger
 from get_fin_report import get_number_from_string
 
 def get_dcf_current_year_input_overrides():
-    return [dbc.Form([dbc.FormGroup(
+    return [dbc.Form([dbc.Form(
                 [
                     dbc.Label("Revenue (M$)", html_for="year0-revenue"),
                     dbc.Input(
@@ -20,7 +20,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("R&D (M$)", html_for="year0-randd"),
                     dbc.Input(
@@ -30,7 +30,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("CapEx (M$)", html_for="year0-capex"),
                     dbc.Input(
@@ -40,7 +40,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("EBIT excl. Reinvestment (M$)", html_for="year0-ebit"),
                     dbc.Input(
@@ -50,7 +50,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Past Revenue CAGR (%)", html_for="year0-rgr"),
                     dbc.Input(
@@ -60,7 +60,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Cash and Equivalents (M$)", html_for="cash"),
                     dbc.Input(
@@ -70,7 +70,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Common Shares Outstanding (Millions)", html_for="shares-outstanding"),
                     dbc.Input(
@@ -80,7 +80,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Minority Interests (M$)", html_for="minority-interests"),
                     dbc.Input(
@@ -90,7 +90,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Nonoperating Assets (M$)", html_for="nonoperating-assets"),
                     dbc.Input(
@@ -100,7 +100,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Employee Options Value (M$)", html_for="options-value"),
                     dbc.Input(
@@ -110,7 +110,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Book Value of Longterm Debt (M$)", html_for="debt-book-value"),
                     dbc.Input(
@@ -120,7 +120,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Interest Expense (M$)", html_for="interest-expense"),
                     dbc.Input(
@@ -130,7 +130,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Convertible Debt Book Value (M$)", html_for="convertible-debt-book-value"),
                     dbc.Input(
@@ -140,7 +140,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Convertible Market Value (M$)", html_for="convertible-market-value"),
                     dbc.Input(
@@ -150,7 +150,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Preferred Equity Number of Shares (Millions)", html_for="preferred-num-shares"),
                     dbc.Input(
@@ -160,7 +160,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Preferred Price per share ($)", html_for="preferred-price-pershare"),
                     dbc.Input(
@@ -170,7 +170,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Preferred Dividend per share ($)", html_for="preferred-dividend-pershare"),
                     dbc.Input(
@@ -180,7 +180,7 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Debt Value of Operating Leases (M$)", html_for="debt-value-op-leases"),
                     dbc.Input(
@@ -190,8 +190,8 @@ def get_dcf_current_year_input_overrides():
                     ),
                 ]
         ),
-        ], inline=True),
-        dbc.Form([dbc.FormGroup(
+        ]),
+        dbc.Form([dbc.Form(
                 [
                     dbc.Label("Average Maturity Duration (years)", html_for="average-maturity"),
                     dcc.Slider(id="average-maturity", min=2, max=10, step=0.25, value=3,
@@ -199,7 +199,7 @@ def get_dcf_current_year_input_overrides():
                     )
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Pretax Cost of Debt (%)", html_for="pretax-cost-debt"),
                     dcc.Slider(id="pretax-cost-debt", min=2, max=10, step=0.25, value=4,
@@ -207,7 +207,7 @@ def get_dcf_current_year_input_overrides():
                     )
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Convertible Debt Portion of Market Value (%)", html_for="convertible-debt-portion"),
                     dcc.Slider(id="convertible-debt-portion", min=0, max=100, step=5, value=0,
@@ -218,7 +218,7 @@ def get_dcf_current_year_input_overrides():
         ])]
 
 def get_other_input_overrides():
-    return dbc.Form([dbc.FormGroup(
+    return dbc.Form([dbc.Form(
                 [
                     dbc.Label("Convergence Year", html_for="convergence-year"),
                     dcc.Slider(id="convergence-year", min=2, max=8, step=1, value=3,
@@ -226,7 +226,7 @@ def get_other_input_overrides():
                     )
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Marginal Tax Rate(%)", html_for="marginal-tax"),
                     dcc.Slider(id="marginal-tax", min=15, max=50, step=1, value=29,
@@ -234,7 +234,7 @@ def get_other_input_overrides():
                     )
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Probability of Failure(%)", html_for="prob-failure"),
                     dcc.Slider(id="prob-failure", min=0, max=99, step=5, value=0,
@@ -242,7 +242,7 @@ def get_other_input_overrides():
                     )
                 ]
         ),
-        dbc.FormGroup(
+        dbc.Form(
                 [
                     dbc.Label("Override default assumptions:"),
                     dbc.Checklist(

@@ -9,7 +9,7 @@ import pandas as pd
 import dash
 from dash.dependencies import Input, Output, State
 from dash_extensions.enrich import ServersideOutput
-import dash_html_components as html
+from dash import html
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 # import plotly.graph_objs as go
