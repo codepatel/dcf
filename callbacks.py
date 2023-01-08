@@ -76,7 +76,7 @@ def save_snapshot(live_analysis_mode, save_button_clicked, ticker, snapshot_uuid
         if save_button_clicked:
             # df_dict[ticker] = {**df_dict[ticker], **dcf_dict[ticker]}
             if 'analysis_timestamp' in df_dict[ticker]['stats_dict']:   # >= v0.6-alpha.3
-                df_dict[ticker]['stats_dict']['analysis_timestamp'] += f',\n{snapshot_uuid} : Analysis saved @ {datetime.now().strftime("%b %-m %Y %H:%M:%S")}'
+                df_dict[ticker]['stats_dict']['analysis_timestamp'] += f',\n{snapshot_uuid} : Analysis saved @ {datetime.now().strftime("%b %-d, %Y %H:%M:%S %Z")}'
             db.set(ticker+'-'+snapshot_uuid, json.dumps(df_dict))
         return '/apps/dcf/' + ticker + '/' + snapshot_uuid, False, not save_button_clicked
     else:
@@ -153,7 +153,7 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
         return [], [], {'is_loading': True}, dash.no_update
     try:
         ticker_allcaps = ticker.upper()
-        db_key = ticker_allcaps+'-'+snapshot_uuid
+        db_key = ticker_allcaps+'-'+snapshot_uuid   # if snapshot_uuid != DEFAULT_SNAPSHOT_UUID else ticker_allcaps
         if 1 in live_analysis_mode or not db.exists(db_key):
             df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
             next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
@@ -164,7 +164,7 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
                             'beta': beta,
                             'next_earnings_date': next_earnings_date,
                             'report_date_note': report_date_note,
-                            'analysis_timestamp': datetime.now().strftime("%b %-m %Y %H:%M:%S"),
+                            'analysis_timestamp': datetime.now().strftime("%b %-d, %Y %H:%M:%S %Z"),
                             }
 
             df_dict = {ticker_allcaps: {'fin_report_dict': df.to_dict('records'), 'stats_dict': stats_record}}
@@ -397,7 +397,7 @@ def update_price_stream(df_dict, update_interval):
             lastprice_time_key = 'time'
         push_msg = json.loads(next(stream_data_generator).data)
         lastprice = push_msg[0][lastprice_key]
-        lastprice_time = time.strftime('%b %d, %Y %H:%M:%S %Z', time.localtime(push_msg[0][lastprice_time_key]/1000))
+        lastprice_time = time.strftime('%b %-d, %Y %H:%M:%S %Z', time.localtime(push_msg[0][lastprice_time_key]/1000))
         return [{'status-info': [html.Br(), f"Last Price {lastprice} @ {lastprice_time}"],
                 'supp-data': []}]
     except Exception as e:

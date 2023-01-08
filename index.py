@@ -5,36 +5,34 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
 from app import app, server
-from layouts import navheader, tabheader, dcflayout, sectorlayout
+from layouts import sidebar, content, dcflayout, sectorlayout, legallayout
 import callbacks
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id="page-content", children=navheader)
+    sidebar, content
 ])
 
-@app.callback([Output('page-content', 'children'),
-Output('nav-main', 'active'),
-Output('nav-dcf', 'active'),
-Output('nav-sector', 'active'),],
+@app.callback(Output('page-content', 'children'),
 [Input('url', 'pathname')])
-def display_page(pathname):
+def render_page_content(pathname):
     if not pathname or pathname == '/': # Root "Main" page
-        return navheader, True, False, False
+        return html.P("Welcome Investor to the home page!")
     if '/apps/dcf' in pathname:
-        return dcflayout, False, True, False
+        return dcflayout
     elif pathname == '/apps/sector':
-        return sectorlayout, False, False, True
-    else:
-        return html.H1("404!"), False, False, False
-
-# @app.callback(Output("tab-content", "children"), [Input("tabs", "active_tab")])
-# def switch_tab(at):
-#     if at == "tab-dcf":
-#         return dcflayout
-#     elif at == "tab-sector":
-#         return sectorlayout
-#     return html.P("This shouldn't ever be displayed...")
+        return sectorlayout
+    elif pathname == '/legal':
+        return legallayout
+    else: # If the user tries to reach a different page, return a 404 message
+        return html.Div(
+        [
+            html.H1("404: Not found", className="text-danger"),
+            html.Hr(),
+            html.P(f"The pathname {pathname} was not recognised..."),
+        ],
+        className="p-3 bg-light rounded-3",
+        )
 
 if __name__ == '__main__':
     app.run_server(host=os.environ.get('HOST', '127.0.0.1'), debug=bool(os.environ.get('DEBUG', 'False')), use_reloader=False) # Turn off reloader if inside Jupyter or using interactive debugging
