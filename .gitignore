@@ -1,0 +1,7 @@
+.DS_Store
+.vscode
+.env
+app/
+__pycache__/
+dump.rdb
+app_DCFoutput.log

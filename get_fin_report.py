@@ -41,7 +41,7 @@ def get_financial_report(ticker):
     isdata_lines = {'revenue': [], 'eps': [], 'pretaxincome': [], 'netincome': [],
                     'interestexpense': [], 'randd': [], 'ebitda': [], 'shares': []
                     }
-    bsdata_lines = {'equity': [], 'ltd': [], 'totalassets': [], 'intangibleassets': [], 
+    bsdata_lines = {'equity': [], 'ltd': [], 'totalassets': [], 'intangibleassets': [],
                     'currentliab': [], 'cash': []
                     }
     cfdata_lines = {'capex': [], 'fcf': []}
@@ -83,17 +83,17 @@ def get_financial_report(ticker):
     if all([c == '-' for c in currentLiabilities]):
         currentLiabilities = ['0'] * len(totalAssets)
     cash = get_element(bsdata_lines['cash'],0) + get_element(bsdata_lines['cash'],2)
-    
+
     # some companies data doesn't have Net Investing Cash Flow Growth or Net Investing Cash Flow / Sales
     capEx = get_element(cfdata_lines['capex'],0) + get_element(cfdata_lines['capex'],int(len(cfdata_lines['capex'])/2))
     fcf = get_element(cfdata_lines['fcf'],0) + get_element(cfdata_lines['fcf'],3)
-    
-    # load all the data into dataframe 
-    df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth, 
+
+    # load all the data into dataframe
+    df= pd.DataFrame({'Revenue($)': revenue, 'Revenue Growth(%)': revenueGrowth, 'EPS($)': eps, 'EPS Growth(%)': epsGrowth,
             'Pretax Income($)': preTaxIncome, 'Net Income($)': netIncome, 'Interest Expense($)': interestExpense,
-            'EBITDA($)': ebitda, 'Research & Development($)': resanddev, 'Shares Outstanding': outstanding_shares, 
+            'EBITDA($)': ebitda, 'Research & Development($)': resanddev, 'Shares Outstanding': outstanding_shares,
             'Longterm Debt($)': longtermDebt, 'Shareholder Equity($)': shareholderEquity,
-            'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets, 
+            'Total Assets($)': totalAssets, 'Intangible Assets($)': intangibleAssets,
             'Total Current Liabilities($)': currentLiabilities, 'Cash($)': cash,
             'Net Investing Cash Flow($)': capEx, 'Free Cash Flow($)': fcf
             },index=range(CURRENT_YEAR-5,CURRENT_YEAR+1))
@@ -141,11 +141,11 @@ def get_sector_data(sector):
         while batch_idx < len(stocks):
             symbol_batch = [s['symbol']
                             for s in stocks[batch_idx:batch_idx+batch_size]]
-            adv_stats_api_urls.append(os.environ.get('IEX_CLOUD_APIURL') 
-                                + 'stock/market/batch?symbols=' + ','.join(symbol_batch) + '&types=advanced-stats&token=' 
+            adv_stats_api_urls.append(os.environ.get('IEX_CLOUD_APIURL')
+                                + 'stock/market/batch?symbols=' + ','.join(symbol_batch) + '&types=advanced-stats&token='
                                 + os.environ.get('IEX_TOKEN'))
             batch_idx += batch_size
-        # limit to 300 companies per sector for getting advanced-stats endpoint, 
+        # limit to 300 companies per sector for getting advanced-stats endpoint,
         # TODO: improve this in future
         for d in loop.run_until_complete(fetch_async(adv_stats_api_urls[:3], format = 'json')):
             resp_dict.update(d)
@@ -235,11 +235,11 @@ def get_income_data(data_titles, data_lines):
             data_lines['ebitda'].append(data_list)
         if 'Diluted Shares Outstanding' in title.text:
             data_lines['shares'].append(data_list)
-    
+
     for title in data_titles['ais']:
         if 'Growth' in title.text:    # scale to %
             build_income_list([get_string_from_number(float(d), True) if d else '-' for d in walk_row(title)])
-        else:   
+        else:
             build_income_list([get_string_from_number(float(d)) if d else '-' for d in walk_row(title)])
 
     for title in data_titles['qis']:    # first convert to numbers, then sum last 4 of 5 qtrs for TTM data
@@ -249,7 +249,7 @@ def get_income_data(data_titles, data_lines):
                 or 'Net Interest Inc After Loan Loss Prov Growth' in title.text:     # for Financial companies top-line
             qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['revenue'][-1][0])/get_number_from_string(data_lines['revenue'][0][-1]) - 1, True)
         elif 'EPS (Diluted)' in title.text: # don't scale to 'M' or '%' for pershare
-            qtr_sum_str = f'{qtr_sum:.2f}' if qtr_sum else '-'           
+            qtr_sum_str = f'{qtr_sum:.2f}' if qtr_sum else '-'
             if 'Growth' in title.text:    # get growth rate
                 qtr_sum_str = get_string_from_number(get_number_from_string(data_lines['eps'][-1][0])/get_number_from_string(data_lines['eps'][0][-1]) - 1, True)
         elif 'Diluted Shares Outstanding' in title.text:  # don't add the Shares Outstanding, return the last Quarter reported value
@@ -274,15 +274,15 @@ def get_balancesheet_data(data_titles, data_lines):
             data_lines['currentliab'].append(data_list)
         if 'Cash & Short Term Investments' in title.text or 'Cash & Due from' in title.text:
             data_lines['cash'].append(data_list)
-    
+
     for title in data_titles['abs']:
         build_balancesheet_list([get_string_from_number(float(d)) if d else '-' for d in walk_row(title)])
     for title in data_titles['qbs']:
         mrq_cell = walk_row(title)[-1]
         build_balancesheet_list([get_string_from_number(float(mrq_cell)) if mrq_cell else '-'])    # only get MRQ
-    
+
     return data_lines
-    
+
 def get_cashflow_data(data_titles, data_lines):
     def build_cashflow_list(data_list):
         if 'Net Investing Cash Flow' in title.text:
@@ -297,7 +297,7 @@ def get_cashflow_data(data_titles, data_lines):
         qtr_data = [get_number_from_string(cell) for cell in walk_row(title)]
         qtr_sum_str = get_string_from_number(sum(qtr_data[1:])) if all(v is not None for v in qtr_data[1:]) else '-'
         build_cashflow_list([qtr_sum_str])
-    
+
     return data_lines
 
 def get_element(list, element):
@@ -343,12 +343,34 @@ def get_yahoo_fin_values(ticker):
     urlmain = 'https://finance.yahoo.com/quote/'+ticker+'/'
     try:
         s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
-        beta = float(s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '143'})[0].text)
-        next_earnings_date = s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-reactid': '158'})[0].text
+        beta = float(s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-test': 'BETA_5Y-value'})[0].text)
+        next_earnings_date = s.findAll('td', {'class': 'Ta(end) Fw(600) Lh(14px)', 'data-test': 'EARNINGS_DATE-value'})[0].text
         return next_earnings_date, beta
     except Exception as e:
         logger.exception(e)
         return 'N/A', []
+
+@cache.memoize(timeout=TIMEOUT_12HR*2*7)    # weekly update
+def get_overview_fin_values(ticker):
+    urlmain = 'https://www.marketwatch.com/investing/stock/'+ticker
+    try:
+        s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
+        beta = float(s.findAll('div', {'class':'element element--list'})[0].findAll('li', {'class':'kv__item'})[6].findAll('span')[0].text)
+        next_earnings_date = '<-Check Yahoo Finance!->'
+        return next_earnings_date, beta
+    except Exception as e:
+        logger.exception(e)
+        return 'N/A', []
+
+@cache.memoize(timeout=TIMEOUT_12HR*2)    # daily update
+def get_rates_fin_values():
+    urlmain = 'https://finance.yahoo.com/quote/^TNX' # Treasury Yield 10 Years
+    try:
+        s = BeautifulSoup(requests.get(urlmain).text, features="html.parser")
+        return float(s.findAll('fin-streamer', {'data-symbol':'^TNX'})[0].text)
+    except Exception as e:
+        logger.exception(e)
+        return 2
 
 # %%
 if __name__ == '__main__':
