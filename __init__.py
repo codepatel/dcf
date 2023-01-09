@@ -8,7 +8,7 @@ if not os.path.exists('app'):   # use /app for logging and caching
 
 from app import cache
 
-VERSION = 'v0.7-alpha.0'
+VERSION = 'v0.7-alpha.1'
 HERE = Path(__file__).parent
 TIMEOUT_12HR = 12*60*60  # cache timeout of 12 hours for getting Financial Reported Data update
 DEFAULT_TICKER = 'AAPL'

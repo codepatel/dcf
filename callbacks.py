@@ -22,7 +22,7 @@ from sseclient import SSEClient
 from __init__ import HERE, TIMEOUT_12HR, DEFAULT_TICKER, DEFAULT_SNAPSHOT_UUID, ticker_dict, exchange_list
 from app import app, cache, db, logger
 from dash_utils import make_table, replace_str_element_w_dash_component
-from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data
+from get_fin_report import get_financial_report, get_yahoo_fin_values, get_number_from_string, get_string_from_number, get_sector_data, get_rates_fin_values
 from get_dcf_valuation import get_dcf_df
 
 def handler_data_message(title, exception_obj):
@@ -142,6 +142,7 @@ def check_ticker_validity(ticker):
 
 @app.callback([ServersideOutput('fin-store', 'data'),
 Output('select-column', 'options'),
+Output('riskfree-rate', 'value'),
 Output('status-info', 'loading_state'),
 Output('handler-past-data', 'data')],
 [Input('ticker-input', 'valid')],
@@ -157,6 +158,7 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
         if 1 in live_analysis_mode or not db.exists(db_key):
             df, lastprice, lastprice_time, report_date_note = get_financial_report(ticker_allcaps)
             next_earnings_date, beta = get_yahoo_fin_values(ticker_allcaps)
+            riskfree_rate = get_rates_fin_values()
 
             stats_record = {'ticker': ticker_allcaps,
                             'lastprice': float(lastprice.replace(',','')),
@@ -186,11 +188,11 @@ def fin_report(ticker_valid, ticker, live_analysis_mode, snapshot_uuid):
         handler_data = {'status-info': f"{stats_record['lastprice']}", 
                         'supp-data': supp_data_notes}
         
-        return df_dict, select_column_options, {'is_loading': False}, [handler_data]
+        return df_dict, select_column_options, riskfree_rate, {'is_loading': False}, [handler_data]
         # 'records' is more "compatible" than 'series'        
     except Exception as e:       
         logger.exception(e)
-        return [], [], {'is_loading': False}, handler_data_message('See Error Message(s) below:', traceback.format_exc())
+        return [], [], 2, {'is_loading': False}, handler_data_message('See Error Message(s) below:', traceback.format_exc())
 
 @app.callback(Output('fin-table', 'children'),
 Input('fin-store', 'data'),

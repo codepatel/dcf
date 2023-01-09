@@ -174,7 +174,7 @@ def get_dcf_current_year_input_overrides():
                 [
                     dbc.Label("Preferred Dividend per share ($)", html_for="preferred-dividend-pershare"),
                     dbc.Input(
-                        type="number", value=5, min=0.01, step=0.01,
+                        type="number", value=0, min=0.0, step=0.01,
                         id="preferred-dividend-pershare",
                         placeholder="Enter number", debounce=True
                     ),
@@ -293,7 +293,7 @@ def update_current_year_values(df_dict, live_analysis_mode, snapshot_uuid):
             year0_ebit = get_number_from_string(year0_dict['Pretax Income($)'])/1e6 + year0_randd
             year0_capex = -round(get_number_from_string(year0_dict['Net Investing Cash Flow($)']))/1e6
             year0_rgr = round(100 * ((get_number_from_string(df_dict[-2]['Revenue($)'])/get_number_from_string(df_dict[0]['Revenue($)'])) ** (1/(len(df_dict)-2)) - 1), 2)
-            # starting point same as past performance            
+            # starting point same as past performance
             cagr_2_5 = min(year0_rgr, 15)
             opm_target = min(100 * mean([ (get_number_from_string(y['Pretax Income($)']) + get_number_from_string(y['Research & Development($)']) )/
                                 get_number_from_string(y['Revenue($)']) for y in df_dict]), 50 )
@@ -377,8 +377,8 @@ def get_cost_of_capital(df_dict, *args):
             cap_structure_list = [equity_market_value, preferred_num_shares * preferred_price_pershare, total_debt]
             total_capital = sum(cap_structure_list)
             wcc = [c/total_capital for c in cap_structure_list]
-            coc = [riskfree_rate + (beta * erp), 
-                    100*preferred_dividend_pershare/preferred_price_pershare, 
+            coc = [riskfree_rate + (beta * erp),
+                    100*preferred_dividend_pershare/preferred_price_pershare,
                     100*pretax_cost_of_debt * (1-tax_rate/100)]
             # Use 5 basis points over the Terminal Growth rate as Minimum CoC
             min_coc = 0.05 + (riskfree_rate if terminal_growth_eq_riskfree_rate else terminal_growth_rate)
@@ -394,4 +394,3 @@ def get_cost_of_capital(df_dict, *args):
 [Input('override-default-assumptions', 'value')])
 def override_assumptions(ovr_flag):
     return [1 in ovr_flag]
-
