@@ -1,12 +1,23 @@
 import os
+# from flask import Flask
+import dash
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
-
-from app import app, server
+# local imports
+from app import app
 from layouts import sidebar, content, dcflayout, sectorlayout, legallayout
 import callbacks
+
+# server = Flask(__name__)
+# @server.route('/')
+# def home():
+#     return 'Hello, World!'
+
+# @server.route('/about')
+# def about():
+#     return 'About'
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
