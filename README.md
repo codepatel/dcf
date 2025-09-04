@@ -32,7 +32,7 @@
     IEX_CLOUD_APISSEURL = https://sandbox-sse.iexapis.com/stable/ or https://cloud-sse.iexapis.com/stable/
     ```
     *Note: If you don't have an IEX Account, get started now with a Free Account by clicking this referral link:* [IEX Cloud is the easiest way to use financial data!](https://iexcloud.io/s/b47b5006)
-6. `>> python index.py`  
+6. `>> python -m api.index`  
     You can expect to see a command-line output like:
     ```
     Dash is running on http://127.0.0.1:8050/
@@ -43,3 +43,4 @@
     ```
 7. Point your browser to: http://localhost:8050/apps/dcf/AAPL to get started.
 8. Validate your analysis with others or your future self by clicking "Save Snapshot", use the Snapshot Link to Bookmark and share with others or look it up in the near or distant future.
+<img width="1720" height="943" alt="DCF_App_screenshot" src="https://github.com/user-attachments/assets/c0de76d9-1bb4-42a8-ada4-5da98c1d7dcb" />
