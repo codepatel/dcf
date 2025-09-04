@@ -97,8 +97,8 @@ dcflayout = html.Div([
                 ]),
         ]),
         html.Div(id='ticker-allcaps'),
-
-        make_card('Status Message', 'success', dbc.Spinner(html.P(id='status-info', loading_state={'is_loading': True}), fullscreen=False)),
+        # dcc.Loading(id="ls-loading", children=[html.Div(id="ls-loading-output-1")], type="default")
+        make_card('Status Message', 'success', dcc.Loading(id="ls-loading", children=[html.P(id='status-info')], type="circle")),
         make_card('Supplemental Info', 'success', dbc.Spinner([html.P(id='supp-info'),
             dcc.Store(id='fin-store'),
             dcc.Store(id='dcf-store'),

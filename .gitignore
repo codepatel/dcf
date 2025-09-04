@@ -5,3 +5,4 @@ app/
 __pycache__/
 dump.rdb
 app_DCFoutput.log
+.vercel

@@ -8,7 +8,7 @@ import uuid
 import pandas as pd
 import dash
 from dash.dependencies import Input, Output, State
-from dash_extensions.enrich import ServersideOutput
+# from dash_extensions.enrich import ServersideOutput
 from dash import html
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
@@ -140,7 +140,7 @@ def check_ticker_validity(ticker):
         return False, True, '', handler_data_message('See Error Message(s) below:', 
                                                 traceback.format_exc())
 
-@app.callback([ServersideOutput('fin-store', 'data'),
+@app.callback([Output('fin-store', 'data'),#ServerSideOutput
 Output('select-column', 'options'),
 Output('riskfree-rate', 'value'),
 Output('status-info', 'loading_state'),
@@ -236,7 +236,7 @@ def update_graph(df_dict, column_name, ticker):
         logger.exception(e)
         return {}
 
-@app.callback([ServersideOutput('dcf-store', 'data'),
+@app.callback([Output('dcf-store', 'data'),#ServerSideOutput
 Output('dcf-table', 'children'),
 Output('dcf-data', 'children'),
 Output('handler-dcf-data', 'data')],
@@ -307,7 +307,7 @@ def dcf_valuation(*args, **kwargs):
         logger.exception(e)
         raise PreventUpdate
         
-@app.callback([ServersideOutput('sector-store', 'data'),
+@app.callback([Output('sector-store', 'data'),#ServerSideOutput
 Output('crossfilter-xaxis-column', 'options'),
 Output('crossfilter-yaxis-column', 'options'),
 Output('select-company', 'options')],
